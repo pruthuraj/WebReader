@@ -41,6 +41,7 @@ app-example
 # generated native folders
 /ios
 /android
+/ref
 
 # ai generated files
 /.claude

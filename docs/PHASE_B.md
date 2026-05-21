@@ -11,6 +11,26 @@ Replace every placeholder screen with a working, end-to-end reading loop on top 
 
 This is the smallest end-to-end vertical slice of the product. Phase C polishes it (settings sheets, TTS, downloader UI), Phase D adds analytics views.
 
+### Responsibility split with Phase C
+
+To keep the boundary sharp, the following items are explicitly **owned by Phase B** even though they look adjacent to polish work:
+
+- **Reading progress — persistence and restoration.** `useProgressAutoSave` writes to the `progress` table, and the reader restores `scrollOffset` from `progressRepo.get` on mount. The *visible* `ReaderProgress` component (the thin top progress strip with percent label) is Phase C work.
+- **Lazy chapter-body materialization.** When a chapter with `body IS NULL` is opened, `services/readerLoad.loadChapterBody` pulls from the mock and persists into `chapters.body`. The *real* download queue worker (background concurrency, retry, wifi-only gating) is Phase C work.
+- **`DownloadedNovelsRow`.** In Phase B this row means "novels that have at least one chapter whose body has been materialized locally" — populated entirely by the lazy-materialization path above. It does **not** imply the user pre-queued anything. Phase C makes the row also reflect explicit downloads.
+
+### Recommended internal build order
+
+| Step | Scope | Exit |
+|---|---|---|
+| B1 | Shared primitives (`NovelCard`, `CoverPlaceholder`, `Tag`, `StatusBadge`, `EmptyState`) + `useHomeRows` skeleton | Components render in Storybook-style sandbox screens |
+| B2 | HomeScreen rows wired to repos | Home shows 4 empty-state rows on fresh DB |
+| B3 | Search flow (SearchBar, SortControl, FiltersSheet, ResultCard) | Search "iron" returns *Iron Garden* |
+| B4 | NovelDetails (NovelHeader, DescriptionBlock, ChapterListItem) | Tapping a result opens details with all 10 chapters |
+| B5 | Reader (ChapterHeader, ReaderContent, ChapterNavigation, `loadChapterBody`) + progress persistence/restoration | Read, leave, return, resume |
+
+The phase is "done" only when B1–B5 are all shipping; the sub-steps are a build order, not separate exit gates.
+
 ## Exit criteria
 
 - The user-journey above works on Expo Go SDK 55 (Android or iOS).
@@ -32,7 +52,7 @@ This is the smallest end-to-end vertical slice of the product. Phase C polishes 
 | `ContinueReadingRow.tsx` | Horizontal `FlatList<NovelCard>` fed by `useHomeRows().continueReading`. Empty state: "Nothing in progress yet". |
 | `RecentlyOpenedRow.tsx` | Horizontal list of distinct novels opened recently (last 30 days). Empty state: "Open a novel to see it here". |
 | `PopularNovelsRow.tsx` | Horizontal list of top-5 novels by `novel_open` event count. Empty state: "Popularity will appear once you start exploring". |
-| `DownloadedNovelsRow.tsx` | Horizontal list of novels with at least one `chapters.body NOT NULL`. Empty state: "You haven't downloaded anything yet". |
+| `DownloadedNovelsRow.tsx` | Horizontal list of novels with at least one `chapters.body NOT NULL`. In Phase B, those bodies arrive only via lazy materialization in `readerLoad` — there is no explicit queue worker yet. Empty state: "Open a chapter to keep it offline." |
 
 Each row is structurally identical: a `<Text>` section title, a `<FlatList horizontal>`, and an `EmptyState` when its data array is empty. They share `src/components/shared/NovelCard.tsx` for the actual card.
 
@@ -61,7 +81,7 @@ Each row is structurally identical: a `<Text>` section title, a `<FlatList horiz
 | `ReaderContent.tsx` | Single `<Text>` rendering the chapter body. Styles derived from `readerStore.appearance` (`fontSize`, `lineHeight`, font family, alignment, horizontal margin, theme colors via `bg-reader-bg` / `text-reader-fg`). |
 | `ChapterNavigation.tsx` | Sticky-bottom row with Prev / Next buttons. Sourced from `chapterRepo.neighbors`. Disabled when null. |
 
-> Phase C adds `ReaderSettingsSheet`, `TTSSettingsSheet`, and `ReaderProgress`. Don't create them in Phase B — keep the reader minimal.
+> Phase C adds `ReaderSettingsSheet`, `TTSSettingsSheet`, and the visible `ReaderProgress` strip. Don't create those components in Phase B — keep the reader minimal. Progress *persistence and restoration* (the `progress` table writes / scroll restore) **does ship in Phase B**; only the on-screen progress indicator is deferred.
 
 ### Shared components — `src/components/shared/`
 
@@ -154,7 +174,7 @@ Render:
 <FlatList<ChapterListItem> />
 ```
 
-`onDownloadAll` just enqueues into `downloadQueue` for now; the worker that actually downloads lands in Phase C, so chapters become "downloaded" lazily via `readerLoad` until then.
+`onDownloadAll` just enqueues into `downloadQueue` for now — rows land with status `queued` and stay there until Phase C ships the worker. In Phase B the only way a chapter actually gets a stored body is by being opened in the reader (lazy materialization through `readerLoad`). Make this honest in the UI: queued chapters show a `queued` `StatusBadge`, not "downloaded".
 
 ### `app/reader/[novelId]/[chapterId].tsx`
 
@@ -303,6 +323,7 @@ All three must exit 0 and the iOS bundle must compile without warnings about the
 ## Out of scope (handed to Phase C)
 
 - ReaderSettingsSheet and TTSSettingsSheet — Phase B reads using whatever defaults `settingsStore` already holds.
+- The visible `ReaderProgress` strip — Phase B persists and restores progress but does not render a progress UI.
 - Real `downloader` service — `Download all` only enqueues; bodies are materialized lazily via `readerLoad` until Phase C.
 - DownloadsScreen UI beyond the Phase A placeholder.
 - Settings screen edits — Phase B leaves settings read-only.

@@ -7,6 +7,20 @@
 
 Promote the Phase B reading loop from "usable demo" to "comfortable to use for an hour." Phase C adds editable reader appearance, working Text-to-Speech, a real download queue, the Settings screen, and motion that makes the app feel native.
 
+## Recommended internal build order
+
+Phase C is the largest phase in the roadmap; ship it as five sequential checkpoints, each independently shippable and verifiable. The whole phase is "done" only when C5 lands.
+
+| Step | Scope | Why this order |
+|---|---|---|
+| C1 | `ReaderSettingsSheet` + the visible `ReaderProgress` strip | Smallest blast radius. No new services, no new background workers. Validates the sheet-animation primitive on something low-risk. |
+| C2 | Editable `SettingsScreen` (Reader defaults, TTS defaults, Downloads prefs, Developer panel) | Same Zustand surface as C1, just exposed app-wide. Adds dev panel that everything else benefits from (clear DB, force reseed, dump events). |
+| C3 | `services/tts.ts` + `TTSSettingsSheet` + TTS event recording | Audio path is independent of downloads; build it next so dashboard TTS minutes have data by Phase D. |
+| C4 | `services/network.ts` + `services/downloader.ts` + `DownloadsScreen` UI + per-chapter enqueue | Largest moving piece. Touches concurrency, network state, and queue UI. Build only after settings + dev panel exist so toggling wifi-only / clearing failed items is easy during development. |
+| C5 | Animations sweep (sheet polish, list enter, chapter cross-fade, button press scale) | Pure-presentational. Lands last so we never re-tune animations against a moving target. |
+
+Each step gets its own commit (or PR). `tsc --noEmit`, `npm run lint`, and an iOS bundle must stay clean at every step.
+
 ## Exit criteria
 
 - Reader appearance is editable from the Reader itself (sheet) and persists across launches (`kv_settings`).
@@ -46,7 +60,7 @@ Promote the Phase B reading loop from "usable demo" to "comfortable to use for a
 
 | File | One-liner |
 |---|---|
-| `tts.ts` | Wrapper around `expo-speech`. Exports `play(text, opts)`, `pause()`, `resume()`, `stop()`, `getVoices()`, `subscribe(listener)`. Internally splits text via `splitSentences()` (regex on `.!?` followed by whitespace/EOF, careful with abbreviations), keeps a `currentSentenceIdx`, fires status events. Handles `onBoundary` (iOS) and falls back to wall-clock estimation on Android when boundary isn't available. |
+| `tts.ts` | Wrapper around `expo-speech`. Exports `play(text, opts)`, `pause()`, `resume()`, `stop()`, `getVoices()`, `subscribe(listener)`. Internally splits text via `splitSentences()` (regex on `.!?` followed by whitespace/EOF, careful with abbreviations), keeps a `currentSentenceIdx`, fires status events. Handles `onBoundary` (iOS) and falls back to wall-clock estimation on Android when boundary isn't available. **Analytics contract:** on each `play()` it records a `tts_start` event (no `duration_ms`) and stamps `Date.now()` on a local `playStartedAt`; on `stop()` (whether user-triggered, end-of-text, or sleep-timer-driven) it records a `tts_stop` event with `duration_ms = now - playStartedAt`. Pause/resume do **not** emit `tts_start`/`tts_stop` — they accumulate into the same span. Phase D reads `duration_ms` only from `tts_stop` rows. |
 | `downloader.ts` | Long-running queue runner. On start, polls `downloadQueueRepo.listByStatus('queued')` at most every 500 ms; runs up to 2 concurrent items via a small in-memory worker pool. Each worker: read item → check `services/network.shouldAllowDownload(settingsStore.settings.wifiOnlyDownloads)` → if not allowed, leave queued and bail → else `catalogue.getChapter` → `chapterRepo.setBody` → `downloadQueueRepo.setStatus('done')` → `downloadStore.refresh`. Errors set status `'failed'` with the message string. |
 | `network.ts` | Wraps `expo-network`. Exports `isOnline()`, `isWifi()`, `shouldAllowDownload(wifiOnly: boolean)`. Subscribes to network changes via `Network.addNetworkStateListener`; pushes updates to a small subscriber list so `downloader.ts` can re-evaluate the queue when state changes. |
 

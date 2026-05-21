@@ -9,6 +9,31 @@ Turn the `events` table — which Phases B and C have been populating with `sear
 
 This phase is the smallest of the four. It introduces a single new service (`analytics.ts`), several presentational components, and replaces `app/dashboard.tsx`.
 
+## Recommended internal build order
+
+Ship the dashboard in slices so the screen is useful long before the chart library lands. Each step is independently shippable.
+
+| Step | Scope | Rationale |
+|---|---|---|
+| D1 | `services/analytics.ts` summary fns + `MetricCard` + `RangePicker` | Highest signal-to-effort: shows real numbers from existing events. No new deps. |
+| D2 | `TopNovelsList` + `analytics.topNovels` (with the new `eventRepo.topNovelsSince`) | Pure SQL + a list; reuses NovelCard styling vocabulary from Phase B. |
+| D3 | `EventStreamPreview` (dev-mode only) | Cheap to build, invaluable for debugging the later chart work. |
+| D4 | `DropOffChart` (+ `DropOffChartFallback`) | Only step that depends on `victory-native` / `react-native-svg`. Isolating it last means a chart-library hiccup never blocks the rest of the dashboard. |
+
+If `victory-native` fails `expo-doctor` for SDK 55, ship D4 with `DropOffChartFallback` (pure `react-native-svg` bars) and revisit charts in a future phase.
+
+## TTS minutes — input contract
+
+`analytics.ttsMinutes(range)` is defined as the sum of `duration_ms` over `events` rows where `type = 'tts_stop'` and `created_at >= rangeBoundMs(range)`, divided by 60000 and rounded to one decimal place.
+
+The reason this is `tts_stop`-only:
+
+- Phase C records `tts_start` with no `duration_ms` (start marker only).
+- Phase C records `tts_stop` with `duration_ms = stop_time - start_time`, regardless of whether the stop was user-triggered, end-of-text, or sleep-timer-driven.
+- Pause/resume do not emit either event — they fold into the same span.
+
+Therefore summing `duration_ms` from `tts_stop` alone gives the canonical "minutes of audio listened" without any need to pair up start/stop rows. If a `tts_start` exists without a matching `tts_stop` (app crash mid-playback), that listening session is simply lost from the metric — acceptable for Phase 1.
+
 ## Exit criteria
 
 - DashboardScreen renders all of:
@@ -52,7 +77,7 @@ export const analytics = {
 
 Implementation notes:
 
-- `summary` calls `eventRepo.countByType` once per relevant event type plus `eventRepo.sumDurationByType('tts_start')` (or `tts_stop`, whichever carries duration in Phase C — pick one and document inside the file).
+- `summary` calls `eventRepo.countByType` once per relevant event type plus `eventRepo.sumDurationByType('tts_stop')` (Phase C records `duration_ms` only on `tts_stop` — see the "TTS minutes — input contract" section above).
 - `topNovels` extends `eventRepo.topNovels` with a `sinceMs` parameter; that may require a new repo method (`eventRepo.topNovelsSince`) — add it during Phase D.
 - `dropOffByChapter` joins the chapter list for the novel with `eventRepo.chapterOpensByNovel`; "reads" = events where `type='chapter_read'`.
 - `averageSessionMs` reads all `session` events with `duration_ms IS NOT NULL` since the range start and averages.

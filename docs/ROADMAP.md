@@ -16,6 +16,49 @@ The single source of design truth for screens and responsibilities is [`SPEC.md`
 | D     | Local-only Dashboard from `events` table                   | planned              | [PHASE_D.md](./PHASE_D.md) | Metrics non-zero after real usage                     |
 | 2+    | Backend, scraper, auth, sync, push, bookmarks              | **out of scope**     | —                          | —                                                     |
 
+## Recommended build order inside each phase
+
+Each phase doc has a "Recommended internal build order" section; the short version is summarized here so the order is visible from the index.
+
+**Phase B — Core reading flow**
+
+```
+B1  Shared primitives + useHomeRows skeleton
+B2  HomeScreen rows wired to repos
+B3  Search flow (SearchBar, SortControl, FiltersSheet, ResultCard)
+B4  NovelDetails (header, description, chapter list)
+B5  Reader + progress persistence/restoration
+```
+
+**Phase C — Polish (largest phase; ship in five commits)**
+
+```
+C1  ReaderSettingsSheet + visible ReaderProgress strip
+C2  Editable SettingsScreen + Developer panel
+C3  services/tts.ts + TTSSettingsSheet + TTS event recording
+C4  services/network.ts + services/downloader.ts + DownloadsScreen + per-chapter enqueue
+C5  Animations sweep (sheets, list enter, chapter cross-fade, button press)
+```
+
+**Phase D — Local-only dashboard**
+
+```
+D1  analytics.summary + MetricCard + RangePicker
+D2  TopNovelsList (+ eventRepo.topNovelsSince)
+D3  EventStreamPreview (dev-mode only)
+D4  DropOffChart (+ react-native-svg fallback)
+```
+
+## Cross-phase invariants
+
+These are the rules you can cite when judging a borderline change:
+
+- **Progress persistence ships in Phase B; the visible progress UI ships in Phase C.** The reader must restore scroll position from day one — but the on-screen progress strip can wait.
+- **Lazy chapter-body materialization ships in Phase B; the real download worker (concurrency, retry, wifi-only) ships in Phase C.** The `DownloadedNovelsRow` in Phase B is sourced from lazy materialization only.
+- **TTS event semantics: `tts_start` is a marker (no `duration_ms`); `tts_stop` carries the canonical `duration_ms`.** Pause/resume do not emit either; they fold into the active span. The Dashboard derives TTS minutes from `tts_stop.duration_ms` alone.
+- **No network calls in Phase 1**, including from the Dashboard. `expo-network` is used solely for the wifi-only download check in Phase C.
+- **Bookmarks are Phase 2+, not Phase 1.** Reading progress is required; bookmarks are not.
+
 ## Locked stack decisions
 
 | Area          | Choice                                             | Notes                                                       |

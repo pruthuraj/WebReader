@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { ReaderThemeName } from "@/theme/readerThemes";
+import { progressRepo } from "@/db/repositories/progressRepo";
 
 export type FontStyle = "system" | "serif" | "sans" | "mono";
 export type TextAlignment = "left" | "justify";
@@ -23,6 +24,12 @@ export interface ReaderState {
   appearance: ReaderAppearance;
   setCurrent: (novelId: string | null, chapterId: string | null) => void;
   setScrollOffset: (offset: number) => void;
+  setProgress: (
+    novelId: string,
+    chapterId: string,
+    scrollOffset: number,
+    percent: number
+  ) => Promise<void>;
   setAppearance: (partial: Partial<ReaderAppearance>) => void;
   resetAppearance: () => void;
 }
@@ -47,6 +54,16 @@ export const useReaderStore = create<ReaderState>((set) => ({
   setCurrent: (novelId, chapterId) =>
     set({ currentNovelId: novelId, currentChapterId: chapterId, scrollOffset: 0 }),
   setScrollOffset: (offset) => set({ scrollOffset: offset }),
+  setProgress: async (novelId, chapterId, scrollOffset, percent) => {
+    await progressRepo.upsert({
+      novelId,
+      chapterId,
+      scrollOffset,
+      percent,
+      updatedAt: Date.now(),
+    });
+    set({ scrollOffset });
+  },
   setAppearance: (partial) =>
     set((s) => ({ appearance: { ...s.appearance, ...partial } })),
   resetAppearance: () => set({ appearance: { ...defaultAppearance } }),

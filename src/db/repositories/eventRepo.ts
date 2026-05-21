@@ -71,6 +71,20 @@ export const eventRepo = {
     );
   },
 
+  async recentDistinctNovelIds(
+    byType: EventType,
+    limit = 10
+  ): Promise<{ novelId: string; createdAt: number }[]> {
+    return all<{ novelId: string; createdAt: number }>(
+      `SELECT novel_id AS novelId, MAX(created_at) AS createdAt FROM events
+       WHERE type = ? AND novel_id IS NOT NULL
+       GROUP BY novel_id
+       ORDER BY createdAt DESC
+       LIMIT ?`,
+      [byType, limit]
+    );
+  },
+
   async chapterOpensByNovel(novelId: string): Promise<{ chapterId: string; count: number }[]> {
     return all<{ chapterId: string; count: number }>(
       `SELECT chapter_id AS chapterId, COUNT(*) AS count FROM events

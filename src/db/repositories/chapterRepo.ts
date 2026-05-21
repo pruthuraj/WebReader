@@ -83,6 +83,17 @@ export const chapterRepo = {
     return r?.c ?? 0;
   },
 
+  async downloadedNovelCounts(limit = 10): Promise<{ novelId: string; count: number }[]> {
+    return all<{ novelId: string; count: number }>(
+      `SELECT novel_id AS novelId, COUNT(*) AS count FROM chapters
+       WHERE body IS NOT NULL
+       GROUP BY novel_id
+       ORDER BY MAX(downloaded_at) DESC
+       LIMIT ?`,
+      [limit]
+    );
+  },
+
   async neighbors(
     novelId: string,
     idx: number

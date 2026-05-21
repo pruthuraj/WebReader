@@ -1,42 +1,46 @@
-import { ScrollView, Text, View } from "react-native";
-import { Link } from "expo-router";
-
-interface NavLinkProps {
-  href: string;
-  title: string;
-  subtitle: string;
-}
-
-function NavTile({ href, title, subtitle }: NavLinkProps) {
-  return (
-    <Link href={href as never} asChild>
-      <View className="mb-3 rounded-2xl border border-slate-200 bg-white p-4 active:opacity-70 dark:border-slate-700 dark:bg-slate-800">
-        <Text className="text-base font-semibold text-slate-900 dark:text-slate-100">
-          {title}
-        </Text>
-        <Text className="mt-1 text-sm text-slate-500 dark:text-slate-400">{subtitle}</Text>
-      </View>
-    </Link>
-  );
-}
+import { useState } from "react";
+import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ContinueReadingRow } from "@/components/home/ContinueReadingRow";
+import { DownloadedNovelsRow } from "@/components/home/DownloadedNovelsRow";
+import { HomeHeader } from "@/components/home/HomeHeader";
+import { PopularNovelsRow } from "@/components/home/PopularNovelsRow";
+import { RecentlyOpenedRow } from "@/components/home/RecentlyOpenedRow";
+import { SearchEntry } from "@/components/home/SearchEntry";
+import { useHomeRows } from "@/hooks/useHomeRows";
 
 export default function HomeScreen() {
+  const rows = useHomeRows();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await rows.refresh();
+    setRefreshing(false);
+  };
+
   return (
-    <ScrollView className="flex-1 bg-slate-50 dark:bg-slate-900" contentContainerStyle={{ padding: 16 }}>
-      <Text className="mb-1 text-3xl font-bold text-slate-900 dark:text-slate-50">WebReader</Text>
-      <Text className="mb-6 text-sm text-slate-500 dark:text-slate-400">
-        Read, listen, and collect web novels — offline first.
-      </Text>
+    <ScrollView
+      className="flex-1 bg-slate-50 dark:bg-slate-950"
+      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    >
+      <HomeHeader />
+      <SearchEntry />
 
-      <NavTile href="/search" title="Search novels" subtitle="Find something new to read" />
-      <NavTile href="/downloads" title="Downloads" subtitle="Manage offline chapters" />
-      <NavTile href="/settings" title="Settings" subtitle="Reader, TTS, and app preferences" />
-      <NavTile href="/dashboard" title="Dashboard" subtitle="Your reading activity" />
+      {rows.loading ? (
+        <View className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+          <ActivityIndicator />
+          <Text className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+            Loading your local library
+          </Text>
+        </View>
+      ) : null}
 
-      <Text className="mt-6 text-xs uppercase tracking-wider text-slate-400">Phase A</Text>
-      <Text className="text-xs text-slate-400">
-        Foundation scaffolding. Search, library rows, and reader come in Phase B.
-      </Text>
+      <ContinueReadingRow data={rows.continueReading} />
+      <RecentlyOpenedRow data={rows.recentlyOpened} />
+      <PopularNovelsRow data={rows.popular} />
+      <DownloadedNovelsRow data={rows.downloaded} />
     </ScrollView>
   );
 }
+

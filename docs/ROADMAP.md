@@ -49,6 +49,59 @@ D3  EventStreamPreview (dev-mode only)
 D4  DropOffChart (+ react-native-svg fallback)
 ```
 
+## TTS Settings extension (P1 shipped, P2–P4 deferred)
+
+See [TTS_SETTINGS.md](./TTS_SETTINGS.md) for the full spec. Phase 1 ships **Priority 1 only**. P2–P4 land in subsequent commits without re-opening Phase C scope.
+
+```
+TTSSettings
+├── Playback
+│   ├── Play / pause / resume / stop          (P1, shipped)
+│   ├── Auto-play next chapter                (P1, shipped)
+│   ├── Sleep timer                           (P1 shipped · EOC option in P2)
+│   ├── Pause between sentences               (P2)
+│   ├── Double tap to read aloud              (P1, shipped)
+│   └── Pause / resume behavior               (P4: navigation audio, Bluetooth)
+│
+├── Voice
+│   ├── Language                              (P1, shipped)
+│   ├── Voice selection                       (P1, shipped)
+│   ├── Download more voices                  (P4, Android)
+│   ├── Install more TTS engines              (P4, Android)
+│   └── Update voice engine                   (P4, Android)
+│
+├── Pronunciation                             (entire section is P3)
+│   ├── Pronunciation rules
+│   ├── Rule categories
+│   ├── Case-sensitive rules
+│   └── Enable / disable rules
+│
+├── Text Cleaning                             (entire section is P2)
+│   ├── Skip symbols / emojis / URLs
+│   ├── Skip brackets / parentheses
+│   ├── Skip headers / footers
+│   └── Read main text only
+│
+├── Highlighting
+│   ├── Highlight sentence                    (P1, shipped)
+│   ├── Highlight word                        (P4, iOS boundary required)
+│   ├── Highlight paragraph                   (P2)
+│   ├── Underline paragraph                   (P2)
+│   └── Comma mode                            (P2)
+│
+├── Queue / Playlist                          (entire section is P4)
+│   ├── Add to playlist directly
+│   ├── Download before playlist
+│   ├── Continue from current position
+│   └── Clear queue
+│
+└── Device Support                            (entire section is P4)
+    ├── Background playback                   (iOS UIBackgroundModes / Android FGS)
+    ├── Battery-optimization warning          (Android)
+    ├── Bluetooth disconnect behavior
+    └── Network-voice warning
+```
+
 ## Cross-phase invariants
 
 These are the rules you can cite when judging a borderline change:
@@ -93,3 +146,4 @@ These are the rules you can cite when judging a borderline change:
 - [PHASE_B.md](./PHASE_B.md) — next up.
 - [PHASE_C.md](./PHASE_C.md) — polish.
 - [PHASE_D.md](./PHASE_D.md) — dashboard.
+- [TTS_SETTINGS.md](./TTS_SETTINGS.md) — full TTS settings extension spec (P1 shipped, P2–P4 deferred).

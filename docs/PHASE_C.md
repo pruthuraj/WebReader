@@ -21,6 +21,16 @@ Phase C is the largest phase in the roadmap; ship it as five sequential checkpoi
 
 Each step gets its own commit (or PR). `tsc --noEmit`, `npm run lint`, and an iOS bundle must stay clean at every step.
 
+### TTS Settings scope inside Phase C
+
+Phase C ships **TTS Settings Priority 1 only**: play / pause / resume / stop, speed, pitch, language, voice picker, sleep timer (Off · 5 · 15 · 30 · 60 m), auto-play next chapter, sentence highlight, and double-tap to read. The follow-up priorities live in [TTS_SETTINGS.md](./TTS_SETTINGS.md):
+
+- **P2** (next TTS commit) — paragraph + comma highlight; text-cleaning toggles (symbols / emojis / URLs / brackets / parentheses / headers / footers); pause time between sentences; auto-start on chapter open; End-of-chapter sleep option.
+- **P3** — pronunciation rules CRUD + categories + case sensitivity + search. Introduces the `pronunciation_rules` table.
+- **P4** — Bluetooth pause/resume; Android battery-optimization warning; install / download more voices (Android intents); playlist behavior; background-playback config.
+
+Bookmarks and pronunciation rules remain explicitly out of Phase 1.
+
 ## Exit criteria
 
 - Reader appearance is editable from the Reader itself (sheet) and persists across launches (`kv_settings`).

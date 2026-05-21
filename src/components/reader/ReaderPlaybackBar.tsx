@@ -9,22 +9,19 @@ interface ReaderPlaybackBarProps {
   text: string;
   novelId: string;
   chapterId: string;
-  onCollapse: () => void;
 }
 
-type ButtonVariant = "default" | "primary" | "close" | "stop";
+type ButtonVariant = "default" | "primary" | "stop";
 
 function PlaybackButton({
   icon,
   label,
   variant = "default",
-  disabled,
   onPress,
 }: {
   icon: ComponentProps<typeof Feather>["name"];
   label: string;
   variant?: ButtonVariant;
-  disabled?: boolean;
   onPress: () => void;
 }) {
   let bg = "bg-white/10";
@@ -32,24 +29,17 @@ function PlaybackButton({
   if (variant === "primary") {
     bg = "bg-white";
     color = "#020617";
-  } else if (variant === "close") {
-    bg = "bg-pink-500/25";
-    color = "#F472B6";
   } else if (variant === "stop") {
     bg = "bg-white/10";
     color = "#FCA5A5";
   }
 
-  const opacityClass = disabled ? "opacity-40" : "active:opacity-75";
-
   return (
     <Pressable
       onPress={onPress}
-      disabled={disabled}
-      className={`h-11 w-11 items-center justify-center rounded-full ${bg} ${opacityClass}`}
+      className={`h-11 w-11 items-center justify-center rounded-full ${bg} active:opacity-75`}
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: !!disabled }}
     >
       <Feather name={icon} size={variant === "primary" ? 22 : 18} color={color} />
     </Pressable>
@@ -68,7 +58,6 @@ export function ReaderPlaybackBar({
   text,
   novelId,
   chapterId,
-  onCollapse,
 }: ReaderPlaybackBarProps) {
   const [sleepOpen, setSleepOpen] = useState(false);
   const status = useTtsStore((s) => s.status);
@@ -83,7 +72,7 @@ export function ReaderPlaybackBar({
   const nextSentence = useTtsStore((s) => s.nextSentence);
   const setSleepTimer = useTtsStore((s) => s.setSleepTimer);
 
-  const isIdle = status === "idle";
+  const showStop = status !== "idle";
   const playIcon = status === "playing" ? "pause" : "play";
 
   const playPause = () => {
@@ -134,15 +123,9 @@ export function ReaderPlaybackBar({
       ) : null}
 
       <View
-        className="mx-3 mb-5 flex-row items-center justify-between rounded-full p-2"
+        className="mx-3 mb-5 flex-row items-center gap-2 rounded-full p-2"
         style={{ backgroundColor: "rgba(2, 6, 23, 0.94)" }}
       >
-        <PlaybackButton
-          icon="x"
-          label="Collapse controls"
-          variant="close"
-          onPress={onCollapse}
-        />
         <PlaybackButton
           icon="skip-back"
           label="Previous sentence"
@@ -159,16 +142,18 @@ export function ReaderPlaybackBar({
           label="Next sentence"
           onPress={() => void nextSentence()}
         />
-        <PlaybackButton
-          icon="square"
-          label="Stop"
-          variant="stop"
-          disabled={isIdle}
-          onPress={() => {
-            void stop();
-            setSleepOpen(false);
-          }}
-        />
+        {showStop ? (
+          <PlaybackButton
+            icon="square"
+            label="Stop"
+            variant="stop"
+            onPress={() => {
+              void stop();
+              setSleepOpen(false);
+            }}
+          />
+        ) : null}
+        <View className="flex-1" />
         <Pressable
           onPress={() => setSleepOpen((open) => !open)}
           className="h-11 min-w-[44px] items-center justify-center rounded-full bg-cyan-500 px-3 active:opacity-75"

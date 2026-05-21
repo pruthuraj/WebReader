@@ -1,17 +1,18 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   InteractionManager,
+  Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { ChapterHeader } from "@/components/reader/ChapterHeader";
 import { ChapterNavigation } from "@/components/reader/ChapterNavigation";
 import { ReaderContent } from "@/components/reader/ReaderContent";
-import { ReaderExpandedControls } from "@/components/reader/ReaderExpandedControls";
 import { ReaderPlaybackBar } from "@/components/reader/ReaderPlaybackBar";
 import { ReaderProgress } from "@/components/reader/ReaderProgress";
 import { ReaderSettingsSheet } from "@/components/reader/ReaderSettingsSheet";
@@ -61,7 +62,6 @@ export default function ReaderScreen() {
   const [loading, setLoading] = useState(true);
   const [readerSheetOpen, setReaderSheetOpen] = useState(false);
   const [ttsSheetOpen, setTtsSheetOpen] = useState(false);
-  const [controlsOpen, setControlsOpen] = useState(false);
 
   const { onScroll, lastSavedPercent } = useProgressAutoSave({
     novelId,
@@ -89,7 +89,6 @@ export default function ReaderScreen() {
     let cancelled = false;
     async function load() {
       setLoading(true);
-      setControlsOpen(false);
       restored.current = false;
       const [nextNovel, nextChapter, nextChapters, nextProgress] = await Promise.all([
         novelRepo.getById(novelId),
@@ -126,18 +125,9 @@ export default function ReaderScreen() {
 
   const openChapter = (target: ChapterMeta | null) => {
     if (!target) return;
-    setControlsOpen(false);
     router.replace({
       pathname: "/reader/[novelId]/[chapterId]",
       params: { novelId: target.novelId, chapterId: target.chapterId },
-    });
-  };
-
-  const openNovelDetails = () => {
-    setControlsOpen(false);
-    router.push({
-      pathname: "/novel/[id]",
-      params: { id: novelId },
     });
   };
 
@@ -195,11 +185,12 @@ export default function ReaderScreen() {
             text={chapter.body}
             appearance={appearance}
             highlightedSentenceIdx={highlightedSentenceIdx}
-            onSingleTap={() => setControlsOpen(true)}
-            onSentenceDoubleTap={(sentenceIndex) => {
-              setControlsOpen(true);
-              void playFromSentence(chapter.body ?? "", sentenceIndex, { novelId, chapterId });
-            }}
+            onSentenceDoubleTap={(sentenceIndex) =>
+              void playFromSentence(chapter.body ?? "", sentenceIndex, {
+                novelId,
+                chapterId,
+              })
+            }
           />
         </Animated.View>
         <ChapterNavigation
@@ -210,43 +201,35 @@ export default function ReaderScreen() {
         />
       </ScrollView>
 
-      <ReaderExpandedControls
-        visible={controlsOpen}
-        percent={lastSavedPercent}
-        novelTitle={novel.title}
-        chapterTitle={chapter.title}
-        chapterIdx={chapter.idx}
-        totalChapters={allChapters.length}
-        prev={neighbors.prev}
-        next={neighbors.next}
-        onClose={() => setControlsOpen(false)}
-        onPrevChapter={() => openChapter(neighbors.prev)}
-        onNextChapter={() => openChapter(neighbors.next)}
-        onOpenAppearance={() => {
-          setControlsOpen(false);
-          setReaderSheetOpen(true);
-        }}
-        onOpenTtsSettings={() => {
-          setControlsOpen(false);
-          setTtsSheetOpen(true);
-        }}
-        onOpenContents={openNovelDetails}
-        onOpenAbout={openNovelDetails}
-        onOpenDownloads={() => {
-          setControlsOpen(false);
-          router.push("/downloads");
-        }}
-      />
-
-      <ReaderPlaybackBar
-        text={chapter.body}
-        novelId={novelId}
-        chapterId={chapterId}
-        onCollapse={() => setControlsOpen(false)}
-      />
+      <ReaderPlaybackBar text={chapter.body} novelId={novelId} chapterId={chapterId} />
 
       <ReaderSettingsSheet visible={readerSheetOpen} onClose={() => setReaderSheetOpen(false)} />
       <TTSSettingsSheet visible={ttsSheetOpen} onClose={() => setTtsSheetOpen(false)} />
+
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <View className="flex-row items-center gap-3 pr-1">
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Reader appearance"
+                onPress={() => setReaderSheetOpen(true)}
+                className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75"
+              >
+                <Feather name="type" size={16} color="#F8FAFC" />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="TTS settings"
+                onPress={() => setTtsSheetOpen(true)}
+                className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75"
+              >
+                <Feather name="volume-2" size={16} color="#F8FAFC" />
+              </Pressable>
+            </View>
+          ),
+        }}
+      />
     </View>
   );
 }

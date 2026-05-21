@@ -20,7 +20,6 @@ interface ReaderContentProps {
   text: string;
   appearance: ReaderAppearance;
   highlightedSentenceIdx?: number | null;
-  onSingleTap?: () => void;
   onSentenceDoubleTap?: (sentenceIndex: number) => void;
 }
 
@@ -33,7 +32,6 @@ export function ReaderContent({
   text,
   appearance,
   highlightedSentenceIdx,
-  onSingleTap,
   onSentenceDoubleTap,
 }: ReaderContentProps) {
   const palette = readerPalettes[appearance.theme];
@@ -63,7 +61,6 @@ export function ReaderContent({
     if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
     singleTapTimer.current = setTimeout(() => {
       singleTapTimer.current = null;
-      onSingleTap?.();
     }, 300);
   };
 

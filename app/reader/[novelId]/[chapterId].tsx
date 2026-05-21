@@ -27,6 +27,7 @@ import { useProgressAutoSave } from "@/hooks/useProgressAutoSave";
 import { loadChapterBody } from "@/services/readerLoad";
 import { useAnalyticsStore } from "@/stores/analyticsStore";
 import { useReaderStore } from "@/stores/readerStore";
+import { useSettingsStore } from "@/stores/settingsStore";
 import { useTtsStore } from "@/stores/ttsStore";
 import { readerPalettes } from "@/theme/readerThemes";
 
@@ -43,8 +44,11 @@ export default function ReaderScreen() {
   const appearance = useReaderStore((s) => s.appearance);
   const setCurrent = useReaderStore((s) => s.setCurrent);
   const highlightedSentenceIdx = useTtsStore((s) => s.highlightSentenceIdx);
+  const ttsStatus = useTtsStore((s) => s.status);
   const playFromSentence = useTtsStore((s) => s.playFromSentence);
   const recordChapterRead = useAnalyticsStore((s) => s.recordChapterRead);
+  const autoStartOnOpen = useSettingsStore((s) => s.settings.ttsDefaults.autoStartOnOpen);
+  const highlightMode = useSettingsStore((s) => s.settings.ttsDefaults.highlightMode);
 
   const scrollRef = useRef<ScrollView>(null);
   const mountedAt = useRef(Date.now());
@@ -125,6 +129,15 @@ export default function ReaderScreen() {
     return () => task.cancel();
   }, [contentHeight, initialOffset, loading]);
 
+  useEffect(() => {
+    if (loading || !autoStartOnOpen || !chapter?.body) return;
+    if (ttsStatus !== "idle") return;
+    void playFromSentence(chapter.body, 0, { novelId, chapterId });
+    // Only auto-start once per chapter load; we depend on chapterId so the
+    // effect re-runs cleanly when navigating chapters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chapterId, loading, autoStartOnOpen]);
+
   const openChapter = (target: ChapterMeta | null) => {
     if (!target) return;
     router.replace({
@@ -187,6 +200,7 @@ export default function ReaderScreen() {
             text={chapter.body}
             appearance={appearance}
             highlightedSentenceIdx={highlightedSentenceIdx}
+            highlightMode={highlightMode}
             onSentenceDoubleTap={(sentenceIndex) =>
               void playFromSentence(chapter.body ?? "", sentenceIndex, {
                 novelId,

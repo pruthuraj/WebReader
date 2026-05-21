@@ -2,11 +2,43 @@ import { create } from "zustand";
 import { kvRepo } from "@/db/repositories/kvRepo";
 import { defaultAppearance, type ReaderAppearance } from "./readerStore";
 
+export type HighlightMode = "sentence" | "paragraph" | "underlineParagraph" | "comma";
+
+export interface TtsCleaningToggles {
+  symbols: boolean;
+  emojis: boolean;
+  superscript: boolean;
+  urls: boolean;
+  brackets: boolean;
+  parens: boolean;
+  spacedUppercase: boolean;
+  hyphens: boolean;
+  lineBreakHyphens: boolean;
+  linkedRefs: boolean;
+}
+
+export const defaultTtsCleaning: TtsCleaningToggles = {
+  symbols: false,
+  emojis: false,
+  superscript: false,
+  urls: false,
+  brackets: false,
+  parens: false,
+  spacedUppercase: false,
+  hyphens: false,
+  lineBreakHyphens: false,
+  linkedRefs: false,
+};
+
 export interface TtsDefaults {
   speed: number;
   pitch: number;
   language: string;
   autoPlayNext: boolean;
+  autoStartOnOpen: boolean;
+  sentencePauseMs: number;
+  highlightMode: HighlightMode;
+  cleaning: TtsCleaningToggles;
 }
 
 export const defaultTtsDefaults: TtsDefaults = {
@@ -14,6 +46,10 @@ export const defaultTtsDefaults: TtsDefaults = {
   pitch: 1.0,
   language: "en-US",
   autoPlayNext: false,
+  autoStartOnOpen: false,
+  sentencePauseMs: 0,
+  highlightMode: "sentence",
+  cleaning: { ...defaultTtsCleaning },
 };
 
 export interface AppSettings {
@@ -34,6 +70,15 @@ export const defaultSettings: AppSettings = {
 
 const KV_KEY = "settings.v1";
 
+function mergeTtsDefaults(stored: Partial<TtsDefaults> | undefined): TtsDefaults {
+  if (!stored) return { ...defaultTtsDefaults };
+  return {
+    ...defaultTtsDefaults,
+    ...stored,
+    cleaning: { ...defaultTtsCleaning, ...(stored.cleaning ?? {}) },
+  };
+}
+
 export interface SettingsState {
   hydrated: boolean;
   settings: AppSettings;
@@ -47,10 +92,15 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   settings: { ...defaultSettings },
   hydrate: async () => {
     if (get().hydrated) return;
-    const stored = await kvRepo.get<AppSettings>(KV_KEY);
+    const stored = await kvRepo.get<Partial<AppSettings>>(KV_KEY);
     if (stored) {
       set({
-        settings: { ...defaultSettings, ...stored },
+        settings: {
+          ...defaultSettings,
+          ...stored,
+          readerDefaults: { ...defaultAppearance, ...(stored.readerDefaults ?? {}) },
+          ttsDefaults: mergeTtsDefaults(stored.ttsDefaults),
+        },
         hydrated: true,
       });
     } else {
@@ -58,7 +108,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
   update: async (partial) => {
-    const next: AppSettings = { ...get().settings, ...partial };
+    const current = get().settings;
+    const next: AppSettings = {
+      ...current,
+      ...partial,
+      ttsDefaults: partial.ttsDefaults
+        ? mergeTtsDefaults({ ...current.ttsDefaults, ...partial.ttsDefaults })
+        : current.ttsDefaults,
+      readerDefaults: partial.readerDefaults
+        ? { ...current.readerDefaults, ...partial.readerDefaults }
+        : current.readerDefaults,
+    };
     set({ settings: next });
     await kvRepo.set(KV_KEY, next);
   },

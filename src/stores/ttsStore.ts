@@ -1,7 +1,9 @@
 import { create } from "zustand";
 import { tts } from "@/services/tts";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 export type TtsStatus = "idle" | "playing" | "paused";
+export type SleepTimerValue = number | "eoc" | null;
 
 export interface TtsState {
   status: TtsStatus;
@@ -10,7 +12,7 @@ export interface TtsState {
   voiceId: string | null;
   language: string;
   autoPlayNext: boolean;
-  sleepTimerSec: number | null;
+  sleepTimerSec: SleepTimerValue;
   sleepRemainingSec: number | null;
   highlightSentenceIdx: number | null;
   setStatus: (status: TtsStatus) => void;
@@ -19,7 +21,7 @@ export interface TtsState {
   setVoice: (id: string | null) => void;
   setLanguage: (lang: string) => void;
   setAutoPlayNext: (v: boolean) => void;
-  setSleepTimer: (sec: number | null) => void;
+  setSleepTimer: (value: SleepTimerValue) => void;
   setHighlight: (idx: number | null) => void;
   play: (
     text: string,
@@ -47,23 +49,23 @@ function clearSleepTimer(set: (partial: Partial<TtsState>) => void) {
 }
 
 function armSleepTimer(
-  seconds: number | null,
+  value: SleepTimerValue,
   set: (partial: Partial<TtsState>) => void,
   get: () => TtsState
 ) {
   if (sleepTimer) clearInterval(sleepTimer);
   sleepTimer = null;
 
-  if (!seconds) {
+  if (!value || value === "eoc") {
     set({ sleepRemainingSec: null });
     return;
   }
 
   const startedAt = Date.now();
-  set({ sleepRemainingSec: seconds });
+  set({ sleepRemainingSec: value });
   sleepTimer = setInterval(() => {
     const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-    const remaining = Math.max(0, seconds - elapsed);
+    const remaining = Math.max(0, value - elapsed);
     set({ sleepRemainingSec: remaining });
     if (remaining <= 0) {
       clearSleepTimer(set);
@@ -77,6 +79,7 @@ function playbackOptions(
   set: (partial: Partial<TtsState>) => void,
   meta?: { novelId?: string | null; chapterId?: string | null }
 ) {
+  const ttsDefaults = useSettingsStore.getState().settings.ttsDefaults;
   return {
     speed: state.speed,
     pitch: state.pitch,
@@ -84,6 +87,9 @@ function playbackOptions(
     language: state.language,
     novelId: meta?.novelId,
     chapterId: meta?.chapterId,
+    pauseMs: ttsDefaults.sentencePauseMs,
+    cleaning: ttsDefaults.cleaning,
+    splitOnCommas: ttsDefaults.highlightMode === "comma",
     onSentence: (idx: number | null) => state.setHighlight(idx),
     onEnd: () => {
       clearSleepTimer(set);
@@ -108,13 +114,13 @@ export const useTtsStore = create<TtsState>((set, get) => ({
   setVoice: (voiceId) => set({ voiceId }),
   setLanguage: (language) => set({ language }),
   setAutoPlayNext: (autoPlayNext) => set({ autoPlayNext }),
-  setSleepTimer: (sleepTimerSec) => {
-    set({ sleepTimerSec });
-    if (get().status === "playing") {
-      armSleepTimer(sleepTimerSec, set, get);
+  setSleepTimer: (value) => {
+    set({ sleepTimerSec: value });
+    if (get().status === "playing" && typeof value === "number") {
+      armSleepTimer(value, set, get);
       return;
     }
-    if (!sleepTimerSec) clearSleepTimer(set);
+    if (!value || value === "eoc") clearSleepTimer(set);
     else set({ sleepRemainingSec: null });
   },
   setHighlight: (highlightSentenceIdx) => set({ highlightSentenceIdx }),

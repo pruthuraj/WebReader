@@ -1,5 +1,6 @@
 import * as Speech from "expo-speech";
 import { eventRepo } from "@/db/repositories/eventRepo";
+import type { TtsCleaningToggles } from "@/stores/settingsStore";
 
 export type TtsRuntimeStatus = "idle" | "playing" | "paused";
 
@@ -10,6 +11,9 @@ export interface TtsPlayOptions {
   voiceId?: string | null;
   novelId?: string | null;
   chapterId?: string | null;
+  pauseMs?: number;
+  cleaning?: TtsCleaningToggles;
+  splitOnCommas?: boolean;
   onSentence?: (idx: number | null) => void;
   onEnd?: () => void;
 }
@@ -23,20 +27,53 @@ type Listener = (snapshot: TtsRuntimeSnapshot) => void;
 
 interface ActiveSpeech {
   sentences: string[];
+  spokenSentences: string[];
   index: number;
   startedAt: number;
   options: TtsPlayOptions;
   nativeRunId: number;
   suppressedRunIds: Set<number>;
+  pauseTimer: ReturnType<typeof setTimeout> | null;
 }
 
 const listeners = new Set<Listener>();
 let active: ActiveSpeech | null = null;
 let status: TtsRuntimeStatus = "idle";
 
-export function splitSentences(text: string) {
-  const matches = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g);
+export function splitSentences(text: string, options?: { commaMode?: boolean }): string[] {
+  const regex = options?.commaMode
+    ? /[^.!?,;]+[.!?,;]+(\s+|$)|[^.!?,;]+$/g
+    : /[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g;
+  const matches = text.match(regex);
   return matches?.map((part) => part.trim()).filter(Boolean) ?? [text];
+}
+
+const URL_REGEX = /\b(?:https?:\/\/|www\.)\S+/gi;
+const SQUARE_BRACKET_REGEX = /\[[^\]]*\]/g;
+const PAREN_REGEX = /\([^)]*\)/g;
+const EMOJI_REGEX = /\p{Extended_Pictographic}/gu;
+const SUPERSCRIPT_REGEX = /[²³¹⁰-₟]/g;
+const LINKED_REF_REGEX = /\^[0-9]+|(?:^|\s)\d+(?=\s|$)/g;
+const SPACED_UPPER_REGEX = /\b(?:[A-Z](?:\s[A-Z]){2,})\b/g;
+const LINE_BREAK_HYPHEN_REGEX = /-\s*\n\s*/g;
+const SYMBOL_KEEP_REGEX = /[^\p{L}\p{N}\s.,!?;:'"\-()\[\]]/gu;
+
+export function cleanSentence(input: string, opts?: TtsCleaningToggles): string {
+  if (!opts) return input;
+  let out = input;
+  if (opts.lineBreakHyphens) out = out.replace(LINE_BREAK_HYPHEN_REGEX, "");
+  if (opts.urls) out = out.replace(URL_REGEX, "");
+  if (opts.brackets) out = out.replace(SQUARE_BRACKET_REGEX, "");
+  if (opts.parens) out = out.replace(PAREN_REGEX, "");
+  if (opts.linkedRefs) out = out.replace(LINKED_REF_REGEX, " ");
+  if (opts.spacedUppercase) {
+    out = out.replace(SPACED_UPPER_REGEX, (match) => match.replace(/\s/g, ""));
+  }
+  if (opts.superscript) out = out.replace(SUPERSCRIPT_REGEX, "");
+  if (opts.emojis) out = out.replace(EMOJI_REGEX, "");
+  if (opts.hyphens) out = out.replace(/-/g, " ");
+  if (opts.symbols) out = out.replace(SYMBOL_KEEP_REGEX, "");
+  return out.replace(/\s+/g, " ").trim();
 }
 
 function emit(sentenceIdx: number | null = active?.index ?? null) {
@@ -53,18 +90,49 @@ async function recordStop(speech: ActiveSpeech) {
   });
 }
 
+function clearPauseTimer(speech: ActiveSpeech) {
+  if (speech.pauseTimer) {
+    clearTimeout(speech.pauseTimer);
+    speech.pauseTimer = null;
+  }
+}
+
 function suppressCurrentNativeStop(speech: ActiveSpeech) {
   speech.suppressedRunIds.add(speech.nativeRunId);
+}
+
+function advanceOrFinish(speech: ActiveSpeech) {
+  if (active !== speech) return;
+  if (speech.index < speech.sentences.length - 1) {
+    speech.index += 1;
+    const pause = Math.max(0, speech.options.pauseMs ?? 0);
+    if (pause > 0) {
+      clearPauseTimer(speech);
+      speech.pauseTimer = setTimeout(() => {
+        speech.pauseTimer = null;
+        if (active === speech) speakCurrent();
+      }, pause);
+    } else {
+      speakCurrent();
+    }
+  } else {
+    void finish();
+  }
 }
 
 function speakCurrent() {
   if (!active) return;
   const speech = active;
-  const sentence = speech.sentences[speech.index];
+  const sentence = speech.spokenSentences[speech.index];
   const runId = ++speech.nativeRunId;
   status = "playing";
   emit(speech.index);
   speech.options.onSentence?.(speech.index);
+
+  if (!sentence || !sentence.trim()) {
+    advanceOrFinish(speech);
+    return;
+  }
 
   Speech.speak(sentence, {
     rate: speech.options.speed,
@@ -73,12 +141,7 @@ function speakCurrent() {
     voice: speech.options.voiceId ?? undefined,
     onDone: () => {
       if (!active || active !== speech) return;
-      if (speech.index < speech.sentences.length - 1) {
-        speech.index += 1;
-        speakCurrent();
-      } else {
-        void finish();
-      }
+      advanceOrFinish(speech);
     },
     onStopped: () => {
       if (active === speech && !speech.suppressedRunIds.has(runId)) void finish();
@@ -92,6 +155,7 @@ function speakCurrent() {
 async function finish() {
   const speech = active;
   if (!speech) return;
+  clearPauseTimer(speech);
   active = null;
   status = "idle";
   emit(null);
@@ -103,6 +167,7 @@ async function finish() {
 async function cancelActive(recordEvent: boolean) {
   const speech = active;
   if (!speech) return;
+  clearPauseTimer(speech);
   suppressCurrentNativeStop(speech);
   active = null;
   status = "idle";
@@ -117,15 +182,18 @@ async function cancelActive(recordEvent: boolean) {
 
 async function startPlayback(text: string, options: TtsPlayOptions, startIndex: number) {
   await cancelActive(false);
-  const sentences = splitSentences(text);
+  const sentences = splitSentences(text, { commaMode: options.splitOnCommas });
+  const spokenSentences = sentences.map((s) => cleanSentence(s, options.cleaning));
   const clampedIndex = Math.max(0, Math.min(sentences.length - 1, startIndex));
   active = {
     sentences,
+    spokenSentences,
     index: clampedIndex,
     startedAt: Date.now(),
     options,
     nativeRunId: 0,
     suppressedRunIds: new Set<number>(),
+    pauseTimer: null,
   };
   await eventRepo.record({
     type: "tts_start",
@@ -137,6 +205,7 @@ async function startPlayback(text: string, options: TtsPlayOptions, startIndex: 
       pitch: options.pitch,
       startSentenceIndex: clampedIndex,
       sentenceCount: sentences.length,
+      pauseMs: options.pauseMs ?? 0,
     },
   });
   speakCurrent();
@@ -146,6 +215,7 @@ async function seekActive(index: number) {
   const speech = active;
   if (!speech) return;
   const clampedIndex = Math.max(0, Math.min(speech.sentences.length - 1, index));
+  clearPauseTimer(speech);
   suppressCurrentNativeStop(speech);
   await Speech.stop();
   if (active !== speech) return;

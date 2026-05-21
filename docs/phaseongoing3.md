@@ -13,7 +13,8 @@
 | Reader UI cleanup (drop popup, double-tap fix, conditional Stop)                                                                                | `912254c` | done   |
 | Bottom tabs + reader header redesign (⋮ menu, chapter chevrons)                                                                                 | `344b4f8` | done   |
 | TTS Settings Priority 1 (play / pause / resume / stop, speed, pitch, language, voice, sleep, auto-play, sentence highlight, double-tap-to-read) | various   | done   |
-| Phase D · Local-only Dashboard (D1–D4)                                                                                                          | _pending commit_ | done   |
+| Phase D · Local-only Dashboard (D1–D4)                                                                                                          | `f5a2347` | done   |
+| TTS Settings Priority 2 (cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight)                                    | _pending commit_ | done   |
 
 ## Remaining work — by group
 
@@ -39,29 +40,23 @@ The four groups below are independent. Pick one at a time; do not interleave.
 
 ---
 
-### Group B · TTS Settings Priority 2
+### Group B · TTS Settings Priority 2 **(SHIPPED)**
 
-**Source of truth:** [TTS_SETTINGS.md](./TTS_SETTINGS.md) sections 1 / 4 / 5 / 7 (marked P2).
+**Source of truth:** [TTS_SETTINGS.md](./TTS_SETTINGS.md) sections 1 / 4 / 5 / 7.
+**Status:** done. Landed in a single commit on top of `f5a2347`.
 
-Lands in `src/services/tts.ts` (filter pipeline + sentence-pause), `src/components/reader/ReaderContent.tsx` (paragraph + comma highlight modes), `src/components/reader/TTSSettingsSheet.tsx` (new toggles + EOC sleep option), `src/stores/settingsStore.ts` (extend `TtsDefaults` shape).
+| Sub-task | Notes |
+|---|---|
+| `cleanSentence(s, opts)` pipeline | Per-sentence filter in `src/services/tts.ts`. 10 toggles: symbols / emojis / superscript / URLs / `[…]` / `(…)` / spaced-uppercase collapse / hyphens / line-break hyphens / linked refs. |
+| Pause between sentences | Chip picker (Off · 100 · 200 · 400 · 800 ms). `services/tts` sleeps via `setTimeout` between `Speech.speak` calls. |
+| Auto-start reading on chapter open | `ttsDefaults.autoStartOnOpen` toggle. Reader screen kicks off `playFromSentence(body, 0, …)` when status is idle on chapter load. |
+| End-of-chapter sleep | New `"eoc"` chip on the sleep-timer row. `armSleepTimer` skips the countdown for EOC; the `onEnd` path already stops at chapter end. |
+| Paragraph highlight | `ReaderContent` computes paragraph index per sentence and highlights every sentence in the active paragraph. |
+| Underline paragraph | Same as paragraph + adds `textDecorationLine: "underline"`. |
+| Comma mode | `splitSentences(text, { commaMode: true })` splits on `,;.!?`. Service and renderer both honor it so indices stay aligned. |
+| "Keep original color when highlighting" | Already the default — accent backgrounds only. No layout-reflow side effect. |
 
-| Sub-task                                     | Notes                                                                                                                                                                                  |
-| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `cleanText(input, settings)` pipeline        | Order: skip rules → whitespace normalize. Toggles: skip symbols / emojis / superscript / URLs / `[…]` / `(…)` / spaces-between-uppercase / hyphens / line-break hyphens / linked text. |
-| Skip page header / page footer               | Strip first / last `\n\n` block when it matches a chapter-marker or footer pattern.                                                                                                    |
-| Pause time between sentences                 | 0–800 ms slider. Implement by sleeping between `Speech.speak` calls in the sentence loop in `services/tts.ts`.                                                                         |
-| Auto-start reading on chapter open           | New `ttsDefaults.autoStartOnOpen` toggle. When on, `ReaderScreen` calls `playFromSentence(body, 0, …)` after `loadChapterBody` resolves. Default off.                                  |
-| End-of-chapter sleep option                  | Add to the sleep-timer chip set (Off · 5 · 15 · 30 · 60 m · **EOC**). When EOC selected, suppress the countdown; stop on `onEnd`.                                                      |
-| Paragraph highlight                          | Compute paragraph boundaries on `\n\n`. Highlight the paragraph containing the active sentence. Toggle.                                                                                |
-| Underline paragraph                          | Toggle that adds `textDecorationLine: "underline"` to the active paragraph (no layout reflow).                                                                                         |
-| Comma mode                                   | Sub-sentence clauses split on `,` and `;`. Highlight clause-by-clause.                                                                                                                 |
-| "Keep original text color when highlighting" | Already the default; surface the toggle explicitly.                                                                                                                                    |
-
-**Exit criteria:**
-
-- All toggles persist across launches in `kv_settings`.
-- Highlighting never reflows layout.
-- tsc / lint / iOS bundle clean.
+**Skip page header / page footer** intentionally deferred — see TTS_SETTINGS.md note. Per-sentence cleaning was the safer Phase 1 cut.
 
 ---
 
@@ -156,7 +151,7 @@ When any of these stop being "Phase 2", move the relevant row into the phase doc
 ## Recommended order
 
 1. ~~**Group A (Phase D)**~~ — **shipped.** Skip.
-2. **Group B (TTS P2)** — biggest UX uplift inside the reading loop without new tables.
+2. ~~**Group B (TTS P2)**~~ — **shipped.** Skip.
 3. **Group E residuals** — interleave between Groups B and C, one or two per commit.
 4. **Group C (TTS P3 pronunciation)** — schema bump + new screen, sized as its own multi-commit chunk.
 5. **Group D (TTS P4 device + engine)** — last, because it touches native config and permissions.

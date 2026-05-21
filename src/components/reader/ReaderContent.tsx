@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Text } from "react-native";
+import { splitSentences } from "@/services/tts";
 import { readerPalettes } from "@/theme/readerThemes";
 import type { ReaderAppearance } from "@/stores/readerStore";
+import type { HighlightMode } from "@/stores/settingsStore";
 
 function fontFamily(fontStyle: ReaderAppearance["fontStyle"]) {
   switch (fontStyle) {
@@ -20,22 +22,53 @@ interface ReaderContentProps {
   text: string;
   appearance: ReaderAppearance;
   highlightedSentenceIdx?: number | null;
+  highlightMode?: HighlightMode;
   onSentenceDoubleTap?: (sentenceIndex: number) => void;
 }
 
-function splitSentences(text: string) {
-  const matches = text.match(/[^.!?]+[.!?]+(\s+|$)|[^.!?]+$/g);
-  return matches?.map((part) => part.trim()).filter(Boolean) ?? [text];
+interface SentenceInfo {
+  sentence: string;
+  paragraphIdx: number;
+}
+
+function buildSentenceInfo(text: string, commaMode: boolean): SentenceInfo[] {
+  const sentences = splitSentences(text, { commaMode });
+  const boundaries: number[] = [0];
+  for (let i = 0; i < text.length - 1; i++) {
+    if (text[i] === "\n" && text[i + 1] === "\n") boundaries.push(i + 2);
+  }
+  const out: SentenceInfo[] = [];
+  let cursor = 0;
+  for (const s of sentences) {
+    const at = text.indexOf(s, cursor);
+    if (at === -1) {
+      out.push({ sentence: s, paragraphIdx: 0 });
+      continue;
+    }
+    cursor = at + s.length;
+    let pIdx = 0;
+    for (let i = 0; i < boundaries.length; i++) {
+      if (boundaries[i] <= at) pIdx = i;
+      else break;
+    }
+    out.push({ sentence: s, paragraphIdx: pIdx });
+  }
+  return out;
 }
 
 export function ReaderContent({
   text,
   appearance,
   highlightedSentenceIdx,
+  highlightMode = "sentence",
   onSentenceDoubleTap,
 }: ReaderContentProps) {
   const palette = readerPalettes[appearance.theme];
-  const sentences = useMemo(() => splitSentences(text), [text]);
+  const commaMode = highlightMode === "comma";
+  const sentenceInfo = useMemo(
+    () => buildSentenceInfo(text, commaMode),
+    [text, commaMode]
+  );
   const singleTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTap = useRef<{ sentenceIndex: number; at: number } | null>(null);
 
@@ -64,6 +97,22 @@ export function ReaderContent({
     }, 300);
   };
 
+  const activeParagraphIdx =
+    highlightedSentenceIdx !== null && highlightedSentenceIdx !== undefined
+      ? sentenceInfo[highlightedSentenceIdx]?.paragraphIdx ?? null
+      : null;
+
+  const isHighlighted = (idx: number) => {
+    if (highlightedSentenceIdx === null || highlightedSentenceIdx === undefined) return false;
+    if (highlightMode === "paragraph" || highlightMode === "underlineParagraph") {
+      return sentenceInfo[idx]?.paragraphIdx === activeParagraphIdx;
+    }
+    return idx === highlightedSentenceIdx;
+  };
+
+  const underlineActive = highlightMode === "underlineParagraph";
+  const accentBg = palette.accent + "2E";
+
   return (
     <Text
       selectable={false}
@@ -75,20 +124,23 @@ export function ReaderContent({
         textAlign: appearance.alignment,
       }}
     >
-      {sentences.map((sentence, idx) => (
-        <Text
-          key={`${idx}-${sentence.slice(0, 12)}`}
-          onPress={() => handleSentencePress(idx)}
-          suppressHighlighting
-          style={{
-            backgroundColor:
-              idx === highlightedSentenceIdx ? palette.accent + "2E" : "transparent",
-          }}
-        >
-          {sentence}
-          {idx < sentences.length - 1 ? " " : ""}
-        </Text>
-      ))}
+      {sentenceInfo.map(({ sentence }, idx) => {
+        const highlighted = isHighlighted(idx);
+        return (
+          <Text
+            key={`${idx}-${sentence.slice(0, 12)}`}
+            onPress={() => handleSentencePress(idx)}
+            suppressHighlighting
+            style={{
+              backgroundColor: highlighted ? accentBg : "transparent",
+              textDecorationLine: highlighted && underlineActive ? "underline" : "none",
+            }}
+          >
+            {sentence}
+            {idx < sentenceInfo.length - 1 ? " " : ""}
+          </Text>
+        );
+      })}
     </Text>
   );
 }

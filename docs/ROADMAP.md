@@ -16,6 +16,27 @@ The single source of design truth for screens and responsibilities is [`SPEC.md`
 | D     | Local-only Dashboard from `events` table                   | planned              | [PHASE_D.md](./PHASE_D.md) | Metrics non-zero after real usage                     |
 | 2+    | Backend, scraper, auth, sync, push, bookmarks              | **out of scope**     | —                          | —                                                     |
 
+## Navigation shell
+
+WebReader uses an Expo Router **tab group + root stack** layout:
+
+```
+app/
+├── _layout.tsx                      root Stack
+├── (tabs)/
+│   ├── _layout.tsx                  bottom Tabs
+│   ├── index.tsx                    Home   (tab 1)
+│   ├── search.tsx                   Search (tab 2)
+│   ├── downloads.tsx                Downloads (tab 3)
+│   └── settings.tsx                 Settings  (tab 4)
+├── novel/[id].tsx                   NovelDetails (root stack, no tabs)
+├── reader/
+│   └── [novelId]/[chapterId].tsx    Reader (root stack, no tabs)
+└── dashboard.tsx                    Dashboard (root stack, no tabs)
+```
+
+The bottom tab bar is visible on Home / Search / Downloads / Settings only. NovelDetails, Reader, and Dashboard run inside the root stack so they get a back arrow and no tabs — they are detail / immersive screens. Dashboard is reachable from a "Reading insights" row inside Settings (no top-level tab).
+
 ## Recommended build order inside each phase
 
 Each phase doc has a "Recommended internal build order" section; the short version is summarized here so the order is visible from the index.
@@ -111,6 +132,7 @@ These are the rules you can cite when judging a borderline change:
 - **TTS event semantics: `tts_start` is a marker (no `duration_ms`); `tts_stop` carries the canonical `duration_ms`.** Pause/resume do not emit either; they fold into the active span. The Dashboard derives TTS minutes from `tts_stop.duration_ms` alone.
 - **No network calls in Phase 1**, including from the Dashboard. `expo-network` is used solely for the wifi-only download check in Phase C.
 - **Bookmarks are Phase 2+, not Phase 1.** Reading progress is required; bookmarks are not.
+- **Bottom tabs are visible on the four main tabs only.** NovelDetails, Reader, and Dashboard hide tabs and run inside the root stack. Dashboard is not a tab — it is opened from inside Settings.
 
 ## Locked stack decisions
 

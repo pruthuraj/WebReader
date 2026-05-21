@@ -13,6 +13,7 @@ import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { ChapterHeader } from "@/components/reader/ChapterHeader";
 import { ChapterNavigation } from "@/components/reader/ChapterNavigation";
 import { ReaderContent } from "@/components/reader/ReaderContent";
+import { ReaderOptionsSheet } from "@/components/reader/ReaderOptionsSheet";
 import { ReaderPlaybackBar } from "@/components/reader/ReaderPlaybackBar";
 import { ReaderProgress } from "@/components/reader/ReaderProgress";
 import { ReaderSettingsSheet } from "@/components/reader/ReaderSettingsSheet";
@@ -62,6 +63,7 @@ export default function ReaderScreen() {
   const [loading, setLoading] = useState(true);
   const [readerSheetOpen, setReaderSheetOpen] = useState(false);
   const [ttsSheetOpen, setTtsSheetOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
 
   const { onScroll, lastSavedPercent } = useProgressAutoSave({
     novelId,
@@ -201,32 +203,42 @@ export default function ReaderScreen() {
         />
       </ScrollView>
 
-      <ReaderPlaybackBar text={chapter.body} novelId={novelId} chapterId={chapterId} />
+      <ReaderPlaybackBar
+        text={chapter.body}
+        novelId={novelId}
+        chapterId={chapterId}
+        prev={neighbors.prev}
+        next={neighbors.next}
+        onPrevChapter={() => openChapter(neighbors.prev)}
+        onNextChapter={() => openChapter(neighbors.next)}
+      />
 
       <ReaderSettingsSheet visible={readerSheetOpen} onClose={() => setReaderSheetOpen(false)} />
       <TTSSettingsSheet visible={ttsSheetOpen} onClose={() => setTtsSheetOpen(false)} />
+      <ReaderOptionsSheet
+        visible={optionsOpen}
+        novelId={novelId}
+        onClose={() => setOptionsOpen(false)}
+        onOpenAppearance={() => setReaderSheetOpen(true)}
+        onOpenTtsSettings={() => setTtsSheetOpen(true)}
+      />
 
       <Stack.Screen
         options={{
+          headerTitle: () => (
+            <Text className="text-base font-black text-slate-50">
+              Chapter {chapter.idx} of {allChapters.length}
+            </Text>
+          ),
           headerRight: () => (
-            <View className="flex-row items-center gap-3 pr-1">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Reader appearance"
-                onPress={() => setReaderSheetOpen(true)}
-                className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75"
-              >
-                <Feather name="type" size={16} color="#F8FAFC" />
-              </Pressable>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="TTS settings"
-                onPress={() => setTtsSheetOpen(true)}
-                className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75"
-              >
-                <Feather name="volume-2" size={16} color="#F8FAFC" />
-              </Pressable>
-            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Reader options"
+              onPress={() => setOptionsOpen(true)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75 mr-1"
+            >
+              <Feather name="more-vertical" size={18} color="#F8FAFC" />
+            </Pressable>
           ),
         }}
       />

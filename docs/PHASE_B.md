@@ -117,14 +117,13 @@ Each row is structurally identical: a `<Text>` section title, a `<FlatList horiz
 
 ## Files modified
 
-### `app/index.tsx`
+### `app/(tabs)/index.tsx`
 
 Replace the four `NavTile` cards with the Home composition:
 
 ```
 <ScrollView refreshControl={<RefreshControl ... />}>
   <HomeHeader />
-  <SearchEntry />
   <ContinueReadingRow data={continueReading} />
   <RecentlyOpenedRow data={recentlyOpened} />
   <PopularNovelsRow data={popular} />
@@ -133,6 +132,8 @@ Replace the four `NavTile` cards with the Home composition:
 ```
 
 Pull-to-refresh re-runs `useHomeRows().refresh`. Skeleton loaders show on first paint until data resolves.
+
+> **Note (post-Phase B nav refactor):** Home now lives at `app/(tabs)/index.tsx` (was `app/index.tsx`). The `SearchEntry` card was removed once Search became a dedicated bottom tab; the file `src/components/home/SearchEntry.tsx` no longer exists. The four data rows and `useHomeRows` are unchanged. See `ROADMAP.md` "Navigation shell" for the current route layout.
 
 ### `app/search.tsx`
 

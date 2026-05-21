@@ -59,15 +59,12 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: "transparent" },
             }}
           >
-            <Stack.Screen name="index" options={{ title: "WebReader" }} />
-            <Stack.Screen name="search" options={{ title: "Search" }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="novel/[id]" options={{ title: "Novel" }} />
             <Stack.Screen
               name="reader/[novelId]/[chapterId]"
               options={{ title: "Reader", headerBackTitle: "Back" }}
             />
-            <Stack.Screen name="downloads" options={{ title: "Downloads" }} />
-            <Stack.Screen name="settings" options={{ title: "Settings" }} />
             <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
           </Stack>
         </ThemeProvider>

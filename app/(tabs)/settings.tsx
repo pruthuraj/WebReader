@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { Alert, ScrollView, Text } from "react-native";
 import { DeveloperPanel } from "@/components/settings/DeveloperPanel";
 import { SettingsRow } from "@/components/settings/SettingsRow";
@@ -18,6 +19,7 @@ function nextNumber(values: readonly number[], current: number, delta: number) {
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const settings = useSettingsStore((s) => s.settings);
   const hydrated = useSettingsStore((s) => s.hydrated);
   const updateSettings = useSettingsStore((s) => s.update);
@@ -190,6 +192,15 @@ export default function SettingsScreen() {
           label="Clear queued and failed"
           subtitle="Downloaded chapters stay on device."
           onPress={clearPendingQueue}
+        />
+      </SettingsSection>
+
+      <SettingsSection title="Reading insights">
+        <SettingsRow
+          type="tap"
+          label="Open dashboard"
+          subtitle="On-device reading metrics. No network calls."
+          onPress={() => router.push("/dashboard")}
         />
       </SettingsSection>
 

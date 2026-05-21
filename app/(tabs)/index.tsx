@@ -5,7 +5,6 @@ import { DownloadedNovelsRow } from "@/components/home/DownloadedNovelsRow";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { PopularNovelsRow } from "@/components/home/PopularNovelsRow";
 import { RecentlyOpenedRow } from "@/components/home/RecentlyOpenedRow";
-import { SearchEntry } from "@/components/home/SearchEntry";
 import { useHomeRows } from "@/hooks/useHomeRows";
 
 export default function HomeScreen() {
@@ -25,7 +24,6 @@ export default function HomeScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <HomeHeader />
-      <SearchEntry />
 
       {rows.loading ? (
         <View className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">

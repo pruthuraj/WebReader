@@ -3,12 +3,17 @@ import type { ComponentProps } from "react";
 import { Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import type { ChapterMeta } from "@/data/types";
 import { useTtsStore } from "@/stores/ttsStore";
 
 interface ReaderPlaybackBarProps {
   text: string;
   novelId: string;
   chapterId: string;
+  prev: ChapterMeta | null;
+  next: ChapterMeta | null;
+  onPrevChapter: () => void;
+  onNextChapter: () => void;
 }
 
 type ButtonVariant = "default" | "primary" | "stop";
@@ -17,11 +22,13 @@ function PlaybackButton({
   icon,
   label,
   variant = "default",
+  disabled,
   onPress,
 }: {
   icon: ComponentProps<typeof Feather>["name"];
   label: string;
   variant?: ButtonVariant;
+  disabled?: boolean;
   onPress: () => void;
 }) {
   let bg = "bg-white/10";
@@ -34,12 +41,16 @@ function PlaybackButton({
     color = "#FCA5A5";
   }
 
+  const opacityClass = disabled ? "opacity-40" : "active:opacity-75";
+
   return (
     <Pressable
       onPress={onPress}
-      className={`h-11 w-11 items-center justify-center rounded-full ${bg} active:opacity-75`}
+      disabled={disabled}
+      className={`h-11 w-11 items-center justify-center rounded-full ${bg} ${opacityClass}`}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
     >
       <Feather name={icon} size={variant === "primary" ? 22 : 18} color={color} />
     </Pressable>
@@ -58,6 +69,10 @@ export function ReaderPlaybackBar({
   text,
   novelId,
   chapterId,
+  prev,
+  next,
+  onPrevChapter,
+  onNextChapter,
 }: ReaderPlaybackBarProps) {
   const [sleepOpen, setSleepOpen] = useState(false);
   const status = useTtsStore((s) => s.status);
@@ -68,8 +83,6 @@ export function ReaderPlaybackBar({
   const pause = useTtsStore((s) => s.pause);
   const resume = useTtsStore((s) => s.resume);
   const stop = useTtsStore((s) => s.stop);
-  const previousSentence = useTtsStore((s) => s.previousSentence);
-  const nextSentence = useTtsStore((s) => s.nextSentence);
   const setSleepTimer = useTtsStore((s) => s.setSleepTimer);
 
   const showStop = status !== "idle";
@@ -127,9 +140,10 @@ export function ReaderPlaybackBar({
         style={{ backgroundColor: "rgba(2, 6, 23, 0.94)" }}
       >
         <PlaybackButton
-          icon="skip-back"
-          label="Previous sentence"
-          onPress={() => void previousSentence()}
+          icon="chevron-left"
+          label="Previous chapter"
+          disabled={!prev}
+          onPress={onPrevChapter}
         />
         <PlaybackButton
           icon={playIcon}
@@ -138,9 +152,10 @@ export function ReaderPlaybackBar({
           onPress={playPause}
         />
         <PlaybackButton
-          icon="skip-forward"
-          label="Next sentence"
-          onPress={() => void nextSentence()}
+          icon="chevron-right"
+          label="Next chapter"
+          disabled={!next}
+          onPress={onNextChapter}
         />
         {showStop ? (
           <PlaybackButton

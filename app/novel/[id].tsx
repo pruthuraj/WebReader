@@ -73,7 +73,13 @@ export default function NovelDetailsScreen() {
   const enqueueAll = async () => {
     if (!id || !chapters.length) return;
     await enqueue(chapters.map((chapter) => ({ novelId: id, chapterId: chapter.chapterId })));
-    Alert.alert("Queued", "Chapters are queued. Phase C will add the download worker.");
+    Alert.alert("Queued", "Chapters are queued and the download worker will process them.");
+  };
+
+  const enqueueOne = async (chapterId: string) => {
+    if (!id) return;
+    await enqueue([{ novelId: id, chapterId }]);
+    Alert.alert("Queued", "Chapter added to the download queue.");
   };
 
   if (loading) {
@@ -131,6 +137,7 @@ export default function NovelDetailsScreen() {
           isInProgress={inProgressChapterIds.has(item.chapterId)}
           isQueued={Boolean(queue[key(id, item.chapterId)])}
           onPress={() => openChapter(item.chapterId)}
+          onQueue={() => enqueueOne(item.chapterId)}
         />
       )}
       ListEmptyComponent={
@@ -143,4 +150,3 @@ export default function NovelDetailsScreen() {
     />
   );
 }
-

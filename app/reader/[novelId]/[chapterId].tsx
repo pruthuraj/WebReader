@@ -7,9 +7,15 @@ import {
   Text,
   View,
 } from "react-native";
+import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import { ChapterHeader } from "@/components/reader/ChapterHeader";
 import { ChapterNavigation } from "@/components/reader/ChapterNavigation";
 import { ReaderContent } from "@/components/reader/ReaderContent";
+import { ReaderExpandedControls } from "@/components/reader/ReaderExpandedControls";
+import { ReaderPlaybackBar } from "@/components/reader/ReaderPlaybackBar";
+import { ReaderProgress } from "@/components/reader/ReaderProgress";
+import { ReaderSettingsSheet } from "@/components/reader/ReaderSettingsSheet";
+import { TTSSettingsSheet } from "@/components/reader/TTSSettingsSheet";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { Chapter, ChapterMeta, Novel } from "@/data/types";
 import { chapterRepo } from "@/db/repositories/chapterRepo";
@@ -19,6 +25,7 @@ import { useProgressAutoSave } from "@/hooks/useProgressAutoSave";
 import { loadChapterBody } from "@/services/readerLoad";
 import { useAnalyticsStore } from "@/stores/analyticsStore";
 import { useReaderStore } from "@/stores/readerStore";
+import { useTtsStore } from "@/stores/ttsStore";
 import { readerPalettes } from "@/theme/readerThemes";
 
 function firstParam(value: string | string[] | undefined) {
@@ -33,6 +40,8 @@ export default function ReaderScreen() {
   const chapterId = firstParam(params.chapterId) ?? "";
   const appearance = useReaderStore((s) => s.appearance);
   const setCurrent = useReaderStore((s) => s.setCurrent);
+  const highlightedSentenceIdx = useTtsStore((s) => s.highlightSentenceIdx);
+  const playFromSentence = useTtsStore((s) => s.playFromSentence);
   const recordChapterRead = useAnalyticsStore((s) => s.recordChapterRead);
 
   const scrollRef = useRef<ScrollView>(null);
@@ -50,6 +59,9 @@ export default function ReaderScreen() {
   const [initialOffset, setInitialOffset] = useState(0);
   const [contentHeight, setContentHeight] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [readerSheetOpen, setReaderSheetOpen] = useState(false);
+  const [ttsSheetOpen, setTtsSheetOpen] = useState(false);
+  const [controlsOpen, setControlsOpen] = useState(false);
 
   const { onScroll, lastSavedPercent } = useProgressAutoSave({
     novelId,
@@ -77,6 +89,7 @@ export default function ReaderScreen() {
     let cancelled = false;
     async function load() {
       setLoading(true);
+      setControlsOpen(false);
       restored.current = false;
       const [nextNovel, nextChapter, nextChapters, nextProgress] = await Promise.all([
         novelRepo.getById(novelId),
@@ -113,9 +126,18 @@ export default function ReaderScreen() {
 
   const openChapter = (target: ChapterMeta | null) => {
     if (!target) return;
+    setControlsOpen(false);
     router.replace({
       pathname: "/reader/[novelId]/[chapterId]",
       params: { novelId: target.novelId, chapterId: target.chapterId },
+    });
+  };
+
+  const openNovelDetails = () => {
+    setControlsOpen(false);
+    router.push({
+      pathname: "/novel/[id]",
+      params: { id: novelId },
     });
   };
 
@@ -143,33 +165,88 @@ export default function ReaderScreen() {
   }
 
   return (
-    <ScrollView
-      ref={scrollRef}
-      className="flex-1"
-      style={{ backgroundColor: palette.bg }}
-      contentContainerStyle={{
-        paddingHorizontal: appearance.margin,
-        paddingTop: 24,
-        paddingBottom: 36,
-      }}
-      scrollEventThrottle={80}
-      onScroll={onScroll}
-      onContentSizeChange={(_, height) => setContentHeight(height)}
-    >
-      <ChapterHeader
+    <View className="flex-1" style={{ backgroundColor: palette.bg }}>
+      <ReaderProgress percent={lastSavedPercent} />
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        style={{ backgroundColor: palette.bg }}
+        contentContainerStyle={{
+          paddingHorizontal: appearance.margin,
+          paddingTop: 42,
+          paddingBottom: 144,
+        }}
+        scrollEventThrottle={80}
+        onScroll={onScroll}
+        onContentSizeChange={(_, height) => setContentHeight(height)}
+      >
+        <ChapterHeader
+          novelTitle={novel.title}
+          chapterTitle={chapter.title}
+          idx={chapter.idx}
+          total={allChapters.length}
+        />
+        <Animated.View
+          key={chapter.chapterId}
+          entering={FadeIn.duration(180)}
+          exiting={FadeOut.duration(120)}
+        >
+          <ReaderContent
+            text={chapter.body}
+            appearance={appearance}
+            highlightedSentenceIdx={highlightedSentenceIdx}
+            onSingleTap={() => setControlsOpen(true)}
+            onSentenceDoubleTap={(sentenceIndex) => {
+              setControlsOpen(true);
+              void playFromSentence(chapter.body ?? "", sentenceIndex, { novelId, chapterId });
+            }}
+          />
+        </Animated.View>
+        <ChapterNavigation
+          prev={neighbors.prev}
+          next={neighbors.next}
+          onPrev={() => openChapter(neighbors.prev)}
+          onNext={() => openChapter(neighbors.next)}
+        />
+      </ScrollView>
+
+      <ReaderExpandedControls
+        visible={controlsOpen}
+        percent={lastSavedPercent}
         novelTitle={novel.title}
         chapterTitle={chapter.title}
-        idx={chapter.idx}
-        total={allChapters.length}
-      />
-      <ReaderContent text={chapter.body} appearance={appearance} />
-      <ChapterNavigation
+        chapterIdx={chapter.idx}
+        totalChapters={allChapters.length}
         prev={neighbors.prev}
         next={neighbors.next}
-        onPrev={() => openChapter(neighbors.prev)}
-        onNext={() => openChapter(neighbors.next)}
+        onClose={() => setControlsOpen(false)}
+        onPrevChapter={() => openChapter(neighbors.prev)}
+        onNextChapter={() => openChapter(neighbors.next)}
+        onOpenAppearance={() => {
+          setControlsOpen(false);
+          setReaderSheetOpen(true);
+        }}
+        onOpenTtsSettings={() => {
+          setControlsOpen(false);
+          setTtsSheetOpen(true);
+        }}
+        onOpenContents={openNovelDetails}
+        onOpenAbout={openNovelDetails}
+        onOpenDownloads={() => {
+          setControlsOpen(false);
+          router.push("/downloads");
+        }}
       />
-    </ScrollView>
+
+      <ReaderPlaybackBar
+        text={chapter.body}
+        novelId={novelId}
+        chapterId={chapterId}
+        onCollapse={() => setControlsOpen(false)}
+      />
+
+      <ReaderSettingsSheet visible={readerSheetOpen} onClose={() => setReaderSheetOpen(false)} />
+      <TTSSettingsSheet visible={ttsSheetOpen} onClose={() => setTtsSheetOpen(false)} />
+    </View>
   );
 }
-

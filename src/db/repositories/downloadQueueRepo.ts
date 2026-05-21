@@ -73,4 +73,18 @@ export const downloadQueueRepo = {
   async clearDone(): Promise<void> {
     await run(`DELETE FROM download_queue WHERE status = 'done'`);
   },
+
+  async clearStatuses(statuses: DownloadStatus[]): Promise<void> {
+    if (!statuses.length) return;
+    const placeholders = statuses.map(() => "?").join(", ");
+    await run(`DELETE FROM download_queue WHERE status IN (${placeholders})`, statuses);
+  },
+
+  async resetDownloadingToQueued(): Promise<void> {
+    await run(
+      `UPDATE download_queue SET status = 'queued', updated_at = ?
+       WHERE status = 'downloading'`,
+      [Date.now()]
+    );
+  },
 };

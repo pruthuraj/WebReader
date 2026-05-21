@@ -1,12 +1,14 @@
 import { Pressable, Text, View } from "react-native";
 import type { ChapterMeta } from "@/data/types";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { Feather } from "@expo/vector-icons";
 
 interface ChapterListItemProps {
   chapter: ChapterMeta;
   isInProgress: boolean;
   isQueued: boolean;
   onPress: () => void;
+  onQueue?: () => void;
 }
 
 export function ChapterListItem({
@@ -14,6 +16,7 @@ export function ChapterListItem({
   isInProgress,
   isQueued,
   onPress,
+  onQueue,
 }: ChapterListItemProps) {
   const status = chapter.downloadedAt
     ? { status: "downloaded" as const, label: "downloaded" }
@@ -37,9 +40,20 @@ export function ChapterListItem({
             {chapter.title}
           </Text>
         </View>
-        <StatusBadge status={status.status} label={status.label} />
+        <View className="items-end">
+          <StatusBadge status={status.status} label={status.label} />
+          {onQueue && !chapter.downloadedAt ? (
+            <Pressable
+              onPress={onQueue}
+              className="mt-2 h-8 w-8 items-center justify-center rounded-full bg-slate-100 active:opacity-70 dark:bg-slate-800"
+              accessibilityRole="button"
+              accessibilityLabel={`Queue ${chapter.title}`}
+            >
+              <Feather name="download" size={14} color="#64748B" />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
     </Pressable>
   );
 }
-

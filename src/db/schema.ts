@@ -1,0 +1,68 @@
+export const SCHEMA_VERSION = 1;
+
+export const MIGRATIONS: string[] = [
+  `
+  PRAGMA journal_mode = WAL;
+
+  CREATE TABLE IF NOT EXISTS novels (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    author TEXT,
+    source TEXT,
+    language TEXT,
+    description TEXT,
+    tags TEXT,
+    cover_hint TEXT,
+    cached_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS chapters (
+    novel_id TEXT NOT NULL,
+    chapter_id TEXT NOT NULL,
+    idx INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT,
+    downloaded_at INTEGER,
+    PRIMARY KEY (novel_id, chapter_id),
+    FOREIGN KEY (novel_id) REFERENCES novels(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_chapters_novel_idx ON chapters(novel_id, idx);
+
+  CREATE TABLE IF NOT EXISTS progress (
+    novel_id TEXT NOT NULL,
+    chapter_id TEXT NOT NULL,
+    scroll_offset REAL NOT NULL,
+    percent REAL NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (novel_id, chapter_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_progress_updated ON progress(updated_at DESC);
+
+  CREATE TABLE IF NOT EXISTS download_queue (
+    novel_id TEXT NOT NULL,
+    chapter_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    error TEXT,
+    enqueued_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (novel_id, chapter_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_queue_status ON download_queue(status);
+
+  CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL,
+    payload TEXT,
+    duration_ms INTEGER,
+    novel_id TEXT,
+    chapter_id TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_events_type_time ON events(type, created_at);
+
+  CREATE TABLE IF NOT EXISTS kv_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
+  `,
+];

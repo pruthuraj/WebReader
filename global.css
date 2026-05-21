@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --reader-bg: 255 255 255;
+  --reader-fg: 17 24 39;
+  --reader-muted: 107 114 128;
+  --reader-accent: 99 102 241;
+}
+
+.theme-dark {
+  --reader-bg: 17 17 19;
+  --reader-fg: 229 231 235;
+  --reader-muted: 156 163 175;
+  --reader-accent: 165 180 252;
+}
+
+.theme-sepia {
+  --reader-bg: 244 232 209;
+  --reader-fg: 60 40 25;
+  --reader-muted: 120 95 70;
+  --reader-accent: 180 100 40;
+}

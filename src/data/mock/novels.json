@@ -1,0 +1,52 @@
+[
+  {
+    "id": "n1",
+    "title": "Echoes of the Azure Mountain",
+    "author": "Lin Wei",
+    "source": "mock",
+    "language": "en",
+    "tags": ["fantasy", "cultivation", "adventure"],
+    "description": "A young disciple named Yan Bo discovers an ancient sword spirit sealed beneath the Azure Mountain. Caught between rival sects, he must master forbidden cultivation while uncovering why the spirit chose him.",
+    "coverHint": "gradient-indigo"
+  },
+  {
+    "id": "n2",
+    "title": "The Last Cartographer of Hollow Bay",
+    "author": "Amara Okafor",
+    "source": "mock",
+    "language": "en",
+    "tags": ["mystery", "noir", "historical"],
+    "description": "Hollow Bay's maps no longer match the coastline. When the city's last surviving cartographer is found drowned at her desk, an orphaned apprentice inherits her maps and the secret they hide.",
+    "coverHint": "gradient-slate"
+  },
+  {
+    "id": "n3",
+    "title": "Iron Garden",
+    "author": "Theo Rask",
+    "source": "mock",
+    "language": "en",
+    "tags": ["sci-fi", "dystopia", "thriller"],
+    "description": "In a city where every plant is patented, a junior botanist smuggles a seed of unknown origin past the Bureau of Cultivars. The seed grows. The city begins to remember what it forgot.",
+    "coverHint": "gradient-emerald"
+  },
+  {
+    "id": "n4",
+    "title": "Saltlight",
+    "author": "Iris Vasconcelos",
+    "source": "mock",
+    "language": "en",
+    "tags": ["romance", "magical-realism", "slice-of-life"],
+    "description": "A lighthouse keeper on the coast of Ilha Branca exchanges letters with a woman who claims to write from a shore that does not appear on any chart. Their correspondence outlives the season.",
+    "coverHint": "gradient-amber"
+  },
+  {
+    "id": "n5",
+    "title": "Quiet Algorithms",
+    "author": "Hadi Karimov",
+    "source": "mock",
+    "language": "en",
+    "tags": ["sci-fi", "litfic", "near-future"],
+    "description": "Mira's company makes recommendation engines for grief. When her newest client asks the system to recommend a way to forget him, she has to decide whether the algorithm has any business knowing the answer.",
+    "coverHint": "gradient-rose"
+  }
+]

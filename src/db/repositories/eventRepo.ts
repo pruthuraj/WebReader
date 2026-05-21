@@ -54,12 +54,37 @@ export const eventRepo = {
     return r?.c ?? 0;
   },
 
-  async sumDurationByType(type: EventType): Promise<number> {
+  async sumDurationByType(type: EventType, sinceMs?: number): Promise<number> {
+    if (sinceMs !== undefined) {
+      const r = await first<{ s: number | null }>(
+        `SELECT COALESCE(SUM(duration_ms), 0) AS s FROM events
+         WHERE type = ? AND created_at >= ?`,
+        [type, sinceMs]
+      );
+      return r?.s ?? 0;
+    }
     const r = await first<{ s: number | null }>(
       `SELECT COALESCE(SUM(duration_ms), 0) AS s FROM events WHERE type = ?`,
       [type]
     );
     return r?.s ?? 0;
+  },
+
+  async averageDurationByType(type: EventType, sinceMs?: number): Promise<number> {
+    if (sinceMs !== undefined) {
+      const r = await first<{ a: number | null }>(
+        `SELECT AVG(duration_ms) AS a FROM events
+         WHERE type = ? AND duration_ms IS NOT NULL AND created_at >= ?`,
+        [type, sinceMs]
+      );
+      return r?.a ?? 0;
+    }
+    const r = await first<{ a: number | null }>(
+      `SELECT AVG(duration_ms) AS a FROM events
+       WHERE type = ? AND duration_ms IS NOT NULL`,
+      [type]
+    );
+    return r?.a ?? 0;
   },
 
   async topNovels(byType: EventType, limit = 5): Promise<{ novelId: string; count: number }[]> {
@@ -68,6 +93,27 @@ export const eventRepo = {
        WHERE type = ? AND novel_id IS NOT NULL
        GROUP BY novel_id ORDER BY count DESC LIMIT ?`,
       [byType, limit]
+    );
+  },
+
+  async topNovelsSince(
+    byType: EventType,
+    sinceMs: number | undefined,
+    limit = 5
+  ): Promise<{ novelId: string; count: number }[]> {
+    if (sinceMs === undefined) {
+      return all<{ novelId: string; count: number }>(
+        `SELECT novel_id AS novelId, COUNT(*) AS count FROM events
+         WHERE type = ? AND novel_id IS NOT NULL
+         GROUP BY novel_id ORDER BY count DESC LIMIT ?`,
+        [byType, limit]
+      );
+    }
+    return all<{ novelId: string; count: number }>(
+      `SELECT novel_id AS novelId, COUNT(*) AS count FROM events
+       WHERE type = ? AND novel_id IS NOT NULL AND created_at >= ?
+       GROUP BY novel_id ORDER BY count DESC LIMIT ?`,
+      [byType, sinceMs, limit]
     );
   },
 

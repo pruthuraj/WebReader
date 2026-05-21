@@ -13,6 +13,7 @@
 | Reader UI cleanup (drop popup, double-tap fix, conditional Stop)                                                                                | `912254c` | done   |
 | Bottom tabs + reader header redesign (⋮ menu, chapter chevrons)                                                                                 | `344b4f8` | done   |
 | TTS Settings Priority 1 (play / pause / resume / stop, speed, pitch, language, voice, sleep, auto-play, sentence highlight, double-tap-to-read) | various   | done   |
+| Phase D · Local-only Dashboard (D1–D4)                                                                                                          | _pending commit_ | done   |
 
 ## Remaining work — by group
 
@@ -20,27 +21,21 @@ The four groups below are independent. Pick one at a time; do not interleave.
 
 ---
 
-### Group A · Phase D — Local-only Dashboard
+### Group A · Phase D — Local-only Dashboard **(SHIPPED)**
 
-**Source of truth:** [PHASE_D.md](./PHASE_D.md). Full plan exists — execute it as-is.
+**Source of truth:** [PHASE_D.md](./PHASE_D.md).
+**Status:** done. All four sub-steps landed in a single commit on top of `5311a9e`.
 
-Current state: `app/dashboard.tsx` shows four hard-coded count cards from `eventRepo`. No range picker, no chart, no top-novels list. The "Reading insights → Open dashboard" row in Settings already routes here (shipped in `344b4f8`), so the entry point is done.
+| Step | New files | Status |
+|---|---|---|
+| **D1** — analytics summary + MetricCard + RangePicker | `src/services/analytics.ts`, `src/components/dashboard/MetricCard.tsx`, `src/components/dashboard/RangePicker.tsx` | done |
+| **D2** — TopNovelsList | `src/components/dashboard/TopNovelsList.tsx` + `eventRepo.topNovelsSince` | done |
+| **D3** — EventStreamPreview (dev-mode only) | `src/components/dashboard/EventStreamPreview.tsx` | done |
+| **D4** — DropOffChart | `src/components/dashboard/DropOffChart.tsx` (hand-rolled `react-native-svg` bars; victory-native intentionally skipped as oversized for one chart) | done |
 
-| Step                                                  | New files                                                                                                                                                                        | Pending |
-| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **D1** — analytics summary + MetricCard + RangePicker | `src/services/analytics.ts`, `src/components/dashboard/MetricCard.tsx`, `src/components/dashboard/RangePicker.tsx`                                                               | pending |
-| **D2** — TopNovelsList                                | `src/components/dashboard/TopNovelsList.tsx`, extend `eventRepo` with `topNovelsSince`                                                                                           | pending |
-| **D3** — EventStreamPreview (dev-mode only)           | `src/components/dashboard/EventStreamPreview.tsx`                                                                                                                                | pending |
-| **D4** — DropOffChart (+ fallback)                    | `src/components/dashboard/DropOffChart.tsx`, `src/components/dashboard/DropOffChartFallback.tsx`. Pick `victory-native` if `expo-doctor` accepts it; otherwise the SVG fallback. | pending |
+`app/dashboard.tsx` is now the full screen: `RangePicker` + 5 `MetricCard` (searches / novel opens / chapters read / TTS minutes / avg session) + `TopNovelsList` + `DropOffChart` + dev-only `EventStreamPreview` + `DashboardEmptyState` when `summary.totalEvents === 0`.
 
-Replace `app/dashboard.tsx` body with the composition described in PHASE_D.md (RangePicker + MetricCards + TopNovelsList + DropOffChart + dev-only EventStreamPreview + DashboardEmptyState).
-
-**Exit criteria** (from PHASE_D.md):
-
-- Five metric cards (searches, novel opens, chapters read, TTS minutes, avg session) non-zero after real usage.
-- Range switch re-runs queries inside ~200 ms.
-- Empty state appears when `eventRepo.totalCount() === 0`.
-- tsc / lint / expo-doctor / iOS bundle all clean.
+`eventRepo` gained `topNovelsSince`, `sumDurationByType(sinceMs)`, and `averageDurationByType(sinceMs)`. `react-native-svg` was added via `npx expo install` (no doctor warnings).
 
 ---
 
@@ -160,7 +155,7 @@ When any of these stop being "Phase 2", move the relevant row into the phase doc
 
 ## Recommended order
 
-1. **Group A (Phase D)** — fastest visible win; turns existing event data into a real dashboard.
+1. ~~**Group A (Phase D)**~~ — **shipped.** Skip.
 2. **Group B (TTS P2)** — biggest UX uplift inside the reading loop without new tables.
 3. **Group E residuals** — interleave between Groups B and C, one or two per commit.
 4. **Group C (TTS P3 pronunciation)** — schema bump + new screen, sized as its own multi-commit chunk.

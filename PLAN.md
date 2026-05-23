@@ -12,8 +12,12 @@
 | `85204f2` | Phase C — polish + persistent playback bar + dark glass sheets |
 | `912254c` | Drop popup, fix double-tap, conditional Stop, TTS settings spec |
 | `344b4f8` | Bottom tabs + reader header redesign (`⋮` menu, chapter chevrons) |
+| `f5a2347` | Phase D — local-only Dashboard (D1–D4: MetricCard, RangePicker, TopNovelsList, EventStreamPreview, DropOffChart) |
+| `6151260` | TTS Priority 2 — cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight |
+| `326cf3e` | TTS Priority 3 — pronunciation rules CRUD + schema v2 + dedicated screen |
+| `644a147` | TTS Priority 4 — Android intents, playlist, auto-advance, background-playback flag, network-voice hint |
 
-TTS Settings **Priority 1** is fully shipped: play / pause / resume / stop · speed · pitch · language · voice · sleep timer · auto-play next · sentence highlight · double-tap-to-read.
+TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/resume and Android foreground-service deferred until a prebuild lands; tracked in `docs/phaseongoing3.md` Group D notes).
 
 ## Current reader UI contract
 
@@ -33,13 +37,18 @@ TTS Settings **Priority 1** is fully shipped: play / pause / resume / stop · sp
 
 ## What's next
 
-See [`docs/phaseongoing3.md`](./docs/phaseongoing3.md). In priority order:
+Groups A–D shipped. Only **Group E residuals** remain in Phase 1 (see [`docs/phaseongoing3.md`](./docs/phaseongoing3.md)):
 
-1. **Group A — Phase D** (local-only Dashboard): MetricCard / RangePicker / TopNovelsList / EventStreamPreview / DropOffChart.
-2. **Group B — TTS Priority 2**: paragraph + comma highlight · text-cleaning skip rules · pause between sentences · auto-start on chapter open · end-of-chapter sleep.
-3. **Group E — small residuals** (interleave with B): wifi-only listener · auto-retry · search debounce · keep-awake cleanup · brightness restore.
-4. **Group C — TTS Priority 3**: pronunciation rules CRUD (new `pronunciation_rules` table + screen).
-5. **Group D — TTS Priority 4**: Bluetooth, battery-optimization, voice/engine deep-links, background playback, playlist queue.
+- Wi-Fi-only flag respects current network state on enable (downloader listener nudge on reconnect)
+- `auto-retry failed` actually retries `failed` rows with backoff
+- Pull-to-refresh throttle on Home
+- `chapter_read` threshold configurable via settings
+- Cover gradient palette extension
+- Brightness restore on Reader unmount
+- Keep-awake cleanup on Reader unmount
+- Search debouncing on `app/(tabs)/search.tsx`
+
+Group D Phase 1 cuts (Bluetooth pause/resume, true Android background-playback FGS, iOS `UIBackgroundModes` audio) are deferred until a prebuild is on the table — they don't fit Expo Go.
 
 Phase 2+ remains out of scope: FastAPI backend, scraping, auth, cloud sync, push, bookmarks, shelves.
 

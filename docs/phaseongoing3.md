@@ -1,6 +1,6 @@
 # Remaining work — ongoing tracker
 
-> **Index:** [ROADMAP.md](./ROADMAP.md) · **Last shipped commit:** `344b4f8` (bottom tabs + reader header redesign)
+> **Index:** [ROADMAP.md](./ROADMAP.md) · **Last shipped commit:** `644a147` (TTS Priority 4 — intents, playlist, auto-advance, device section)
 > **Audience:** any agent or engineer picking up the project mid-stream. Read this top-to-bottom to know what's left.
 
 ## What's already shipped (skip)
@@ -16,7 +16,7 @@
 | Phase D · Local-only Dashboard (D1–D4)                                                                                                          | `f5a2347` | done   |
 | TTS Settings Priority 2 (cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight)                                    | `6151260` | done   |
 | TTS Settings Priority 3 (pronunciation rules CRUD + schema v2 + dedicated screen)                                                               | `326cf3e` | done   |
-| TTS Settings Priority 4 (Android intents, playlist, auto-advance, background-playback flag, network-voice hint)                                 | _pending commit_ | done   |
+| TTS Settings Priority 4 (Android intents, playlist, auto-advance, background-playback flag, network-voice hint)                                 | `644a147` | done   |
 
 ## Remaining work — by group
 

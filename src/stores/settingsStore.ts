@@ -39,6 +39,7 @@ export interface TtsDefaults {
   sentencePauseMs: number;
   highlightMode: HighlightMode;
   cleaning: TtsCleaningToggles;
+  backgroundPlayback: boolean;
 }
 
 export const defaultTtsDefaults: TtsDefaults = {
@@ -50,6 +51,7 @@ export const defaultTtsDefaults: TtsDefaults = {
   sentencePauseMs: 0,
   highlightMode: "sentence",
   cleaning: { ...defaultTtsCleaning },
+  backgroundPlayback: false,
 };
 
 export interface AppSettings {

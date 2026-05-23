@@ -26,9 +26,10 @@ import { progressRepo } from "@/db/repositories/progressRepo";
 import { useProgressAutoSave } from "@/hooks/useProgressAutoSave";
 import { loadChapterBody } from "@/services/readerLoad";
 import { useAnalyticsStore } from "@/stores/analyticsStore";
+import { usePlaylistStore } from "@/stores/playlistStore";
 import { useReaderStore } from "@/stores/readerStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { useTtsStore } from "@/stores/ttsStore";
+import { useTtsStore, type SleepTimerValue } from "@/stores/ttsStore";
 import { readerPalettes } from "@/theme/readerThemes";
 
 function firstParam(value: string | string[] | undefined) {
@@ -45,10 +46,14 @@ export default function ReaderScreen() {
   const setCurrent = useReaderStore((s) => s.setCurrent);
   const highlightedSentenceIdx = useTtsStore((s) => s.highlightSentenceIdx);
   const ttsStatus = useTtsStore((s) => s.status);
+  const sleepTimerSec = useTtsStore((s) => s.sleepTimerSec);
   const playFromSentence = useTtsStore((s) => s.playFromSentence);
   const recordChapterRead = useAnalyticsStore((s) => s.recordChapterRead);
   const autoStartOnOpen = useSettingsStore((s) => s.settings.ttsDefaults.autoStartOnOpen);
+  const autoPlayNext = useSettingsStore((s) => s.settings.ttsDefaults.autoPlayNext);
   const highlightMode = useSettingsStore((s) => s.settings.ttsDefaults.highlightMode);
+  const popNextInQueue = usePlaylistStore((s) => s.popNext);
+  const prevTtsStatus = useRef<typeof ttsStatus>("idle");
 
   const scrollRef = useRef<ScrollView>(null);
   const mountedAt = useRef(Date.now());
@@ -137,6 +142,32 @@ export default function ReaderScreen() {
     // effect re-runs cleanly when navigating chapters.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapterId, loading, autoStartOnOpen]);
+
+  useEffect(() => {
+    const previous = prevTtsStatus.current;
+    prevTtsStatus.current = ttsStatus;
+    if (previous === "idle" || ttsStatus !== "idle") return;
+    if (loading || !chapter) return;
+    // Suppress auto-advance when the sleep timer is set to end-of-chapter.
+    const eoc: SleepTimerValue = "eoc";
+    if (sleepTimerSec === eoc) return;
+
+    const queued = popNextInQueue();
+    if (queued) {
+      router.replace({
+        pathname: "/reader/[novelId]/[chapterId]",
+        params: { novelId: queued.novelId, chapterId: queued.chapterId },
+      });
+      return;
+    }
+    if (autoPlayNext && neighbors.next) {
+      router.replace({
+        pathname: "/reader/[novelId]/[chapterId]",
+        params: { novelId: neighbors.next.novelId, chapterId: neighbors.next.chapterId },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ttsStatus]);
 
   const openChapter = (target: ChapterMeta | null) => {
     if (!target) return;
@@ -228,7 +259,13 @@ export default function ReaderScreen() {
       />
 
       <ReaderSettingsSheet visible={readerSheetOpen} onClose={() => setReaderSheetOpen(false)} />
-      <TTSSettingsSheet visible={ttsSheetOpen} onClose={() => setTtsSheetOpen(false)} />
+      <TTSSettingsSheet
+        visible={ttsSheetOpen}
+        onClose={() => setTtsSheetOpen(false)}
+        novelId={novelId}
+        chapterId={chapterId}
+        nextChapter={neighbors.next}
+      />
       <ReaderOptionsSheet
         visible={optionsOpen}
         novelId={novelId}

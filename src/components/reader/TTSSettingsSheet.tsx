@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { Modal, Pressable, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import type { Voice } from "expo-speech";
 import { useAnimatedSheet } from "@/hooks/useAnimatedSheet";
 import { pronunciationRepo } from "@/db/repositories/pronunciationRepo";
+import type { ChapterMeta } from "@/data/types";
+import { intent } from "@/services/intent";
 import { tts } from "@/services/tts";
+import { usePlaylistStore } from "@/stores/playlistStore";
 import {
   defaultTtsCleaning,
   useSettingsStore,
@@ -18,6 +21,9 @@ import { useTtsStore, type SleepTimerValue } from "@/stores/ttsStore";
 interface TTSSettingsSheetProps {
   visible: boolean;
   onClose: () => void;
+  novelId?: string;
+  chapterId?: string;
+  nextChapter?: ChapterMeta | null;
 }
 
 const LANGUAGE_OPTIONS = ["en-US", "en-GB", "en-AU", "hi-IN"];
@@ -120,6 +126,44 @@ function Chip({
   );
 }
 
+function ActionRow({
+  icon,
+  label,
+  subtitle,
+  disabled,
+  onPress,
+}: {
+  icon: React.ComponentProps<typeof Feather>["name"];
+  label: string;
+  subtitle?: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: !!disabled }}
+      className={`mb-2 flex-row items-center rounded-2xl bg-white/5 p-3 ${
+        disabled ? "opacity-50" : "active:opacity-75"
+      }`}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
+        <Feather name={icon} size={16} color="#FDE68A" />
+      </View>
+      <View className="ml-3 flex-1 pr-2">
+        <Text className="text-sm font-black text-white">{label}</Text>
+        {subtitle ? (
+          <Text className="mt-0.5 text-xs text-white/60">{subtitle}</Text>
+        ) : null}
+      </View>
+      <Feather name="external-link" size={16} color="rgba(248, 250, 252, 0.5)" />
+    </Pressable>
+  );
+}
+
 function ToggleRow({
   label,
   subtitle,
@@ -147,7 +191,13 @@ function ToggleRow({
   );
 }
 
-export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
+export function TTSSettingsSheet({
+  visible,
+  onClose,
+  novelId,
+  chapterId,
+  nextChapter,
+}: TTSSettingsSheetProps) {
   const status = useTtsStore((s) => s.status);
   const speed = useTtsStore((s) => s.speed);
   const pitch = useTtsStore((s) => s.pitch);
@@ -168,7 +218,12 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
   const router = useRouter();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [showCleaning, setShowCleaning] = useState(false);
+  const [showDevice, setShowDevice] = useState(false);
   const [pronunciationCounts, setPronunciationCounts] = useState({ total: 0, enabled: 0 });
+  const queueLength = usePlaylistStore((s) => s.queue.length);
+  const enqueue = usePlaylistStore((s) => s.enqueue);
+  const clearQueue = usePlaylistStore((s) => s.clear);
+  const queueHas = usePlaylistStore((s) => s.has);
 
   useEffect(() => {
     if (!visible) return;
@@ -185,6 +240,45 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
     router.push("/tts-pronunciation" as never);
   };
 
+  const currentInQueue =
+    novelId && chapterId ? queueHas(novelId, chapterId) : false;
+
+  const addCurrentToQueue = () => {
+    if (!novelId || !chapterId) return;
+    if (currentInQueue) {
+      Alert.alert("Already queued", "This chapter is already in the listening queue.");
+      return;
+    }
+    enqueue({ novelId, chapterId });
+  };
+
+  const addNextToQueue = () => {
+    if (!nextChapter) return;
+    enqueue({ novelId: nextChapter.novelId, chapterId: nextChapter.chapterId });
+  };
+
+  const handleClearQueue = () => {
+    if (!queueLength) return;
+    Alert.alert("Clear listening queue?", `${queueLength} chapter(s) will be removed.`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Clear", style: "destructive", onPress: () => clearQueue() },
+    ]);
+  };
+
+  const runIntent = (
+    action: () => Promise<boolean>,
+    failureMessage: string,
+    iosMessage = "Available on Android only."
+  ) => {
+    if (!intent.isAndroid) {
+      Alert.alert("Not available", iosMessage);
+      return;
+    }
+    void action().then((ok) => {
+      if (!ok) Alert.alert("Couldn't open", failureMessage);
+    });
+  };
+
   const ttsDefaults = settings.ttsDefaults;
   const cleaning = ttsDefaults.cleaning ?? defaultTtsCleaning;
 
@@ -198,6 +292,7 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
       sentencePauseMs: number;
       highlightMode: HighlightMode;
       cleaning: TtsCleaningToggles;
+      backgroundPlayback: boolean;
     }>
   ) => {
     await updateSettings({ ttsDefaults: { ...ttsDefaults, ...partial } });
@@ -274,19 +369,26 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
             <Text className="mb-2 text-xs font-black uppercase text-white/60">Voice</Text>
             <View className="mb-4 flex-row flex-wrap rounded-2xl bg-white/5 p-2">
               <Chip label="Default" selected={!voiceId} onPress={() => setVoice(null)} />
-              {filteredVoices.map((voice) => (
-                <Chip
-                  key={voice.identifier}
-                  label={voice.name}
-                  selected={voiceId === voice.identifier}
-                  onPress={() => setVoice(voice.identifier)}
-                />
-              ))}
+              {filteredVoices.map((voice) => {
+                const enhanced = (voice.quality ?? "").toLowerCase().includes("enhanced");
+                const label = enhanced ? `${voice.name} · HQ` : voice.name;
+                return (
+                  <Chip
+                    key={voice.identifier}
+                    label={label}
+                    selected={voiceId === voice.identifier}
+                    onPress={() => setVoice(voice.identifier)}
+                  />
+                );
+              })}
               {filteredVoices.length === 0 && !voiceId ? (
                 <Text className="m-2 text-xs text-white/40">
                   No additional voices match {language}.
                 </Text>
               ) : null}
+              <Text className="m-2 text-[10px] text-white/40">
+                Voices marked HQ are higher quality and may require Wi-Fi the first time.
+              </Text>
             </View>
 
             <Stepper
@@ -412,7 +514,7 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
             </Pressable>
 
             {showCleaning ? (
-              <View className="mb-8">
+              <View className="mb-3">
                 {CLEANING_ROWS.map((row) => (
                   <ToggleRow
                     key={row.key}
@@ -422,6 +524,159 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
                     onChange={(v) => void updateCleaning(row.key, v)}
                   />
                 ))}
+              </View>
+            ) : null}
+
+            <Text className="mb-2 mt-3 text-xs font-black uppercase text-white/60">
+              Listening queue
+            </Text>
+            <View className="mb-2 rounded-2xl bg-white/5 p-3">
+              <Text className="text-sm font-black text-white">
+                {queueLength} chapter{queueLength === 1 ? "" : "s"} queued
+              </Text>
+              <Text className="mt-0.5 text-xs text-white/60">
+                Plays after the current chapter ends. In-memory only; clears on app restart.
+              </Text>
+              <View className="mt-3 flex-row flex-wrap">
+                <Pressable
+                  onPress={addCurrentToQueue}
+                  disabled={!novelId || !chapterId || currentInQueue}
+                  className={`mr-2 mt-2 rounded-full px-3 py-2 ${
+                    !novelId || !chapterId || currentInQueue
+                      ? "bg-white/5"
+                      : "bg-yellow-300 active:opacity-75"
+                  }`}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    className={`text-xs font-black ${
+                      !novelId || !chapterId || currentInQueue ? "text-white/40" : "text-slate-950"
+                    }`}
+                  >
+                    {currentInQueue ? "Already queued" : "Add current chapter"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={addNextToQueue}
+                  disabled={!nextChapter}
+                  className={`mr-2 mt-2 rounded-full px-3 py-2 ${
+                    !nextChapter ? "bg-white/5" : "bg-white/10 active:opacity-75"
+                  }`}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    className={`text-xs font-black ${
+                      !nextChapter ? "text-white/40" : "text-white"
+                    }`}
+                  >
+                    Add next chapter
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={handleClearQueue}
+                  disabled={!queueLength}
+                  className={`mr-2 mt-2 rounded-full px-3 py-2 ${
+                    !queueLength ? "bg-white/5" : "bg-pink-500/25 active:opacity-75"
+                  }`}
+                  accessibilityRole="button"
+                >
+                  <Text
+                    className={`text-xs font-black ${
+                      !queueLength ? "text-white/40" : "text-pink-200"
+                    }`}
+                  >
+                    Clear queue
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <Pressable
+              onPress={() => setShowDevice((open) => !open)}
+              className="mb-2 mt-3 flex-row items-center justify-between rounded-2xl bg-white/5 p-3 active:opacity-75"
+              accessibilityRole="button"
+            >
+              <View className="flex-1 pr-3">
+                <Text className="text-sm font-black text-white">Device & engine</Text>
+                <Text className="mt-0.5 text-xs text-white/60">
+                  Background playback, Android intents, Bluetooth note.
+                </Text>
+              </View>
+              <Feather
+                name={showDevice ? "chevron-up" : "chevron-down"}
+                size={18}
+                color="#FDE68A"
+              />
+            </Pressable>
+
+            {showDevice ? (
+              <View className="mb-8">
+                <ToggleRow
+                  label="Background playback"
+                  subtitle={
+                    intent.isIos
+                      ? "Stored preference. iOS needs a prebuild with UIBackgroundModes: audio to actually keep playing."
+                      : "Stored preference. Android needs a foreground-service module (not in Expo Go) to keep playing when locked."
+                  }
+                  value={ttsDefaults.backgroundPlayback}
+                  onChange={(v) => void updateTtsDefault({ backgroundPlayback: v })}
+                />
+
+                <ActionRow
+                  icon="settings"
+                  label="Open TTS engine settings"
+                  subtitle="Android: switch engine, change defaults."
+                  disabled={!intent.isAndroid}
+                  onPress={() =>
+                    runIntent(intent.openTtsSettings, "Could not open TTS engine settings.")
+                  }
+                />
+                <ActionRow
+                  icon="download-cloud"
+                  label="Download more voices"
+                  subtitle="Android: install offline voice data for the active engine."
+                  disabled={!intent.isAndroid}
+                  onPress={() =>
+                    runIntent(
+                      intent.openVoiceDataSettings,
+                      "Could not open voice data installer."
+                    )
+                  }
+                />
+                <ActionRow
+                  icon="refresh-cw"
+                  label="Update Google TTS engine"
+                  subtitle="Android: deep-link to the Play Store listing."
+                  disabled={!intent.isAndroid}
+                  onPress={() =>
+                    runIntent(
+                      intent.openGoogleTtsListing,
+                      "Could not open the Play Store listing."
+                    )
+                  }
+                />
+                <ActionRow
+                  icon="battery-charging"
+                  label="Disable battery optimization"
+                  subtitle="Android: stops the OS from killing long playback sessions."
+                  disabled={!intent.isAndroid}
+                  onPress={() =>
+                    runIntent(
+                      intent.openBatteryOptimization,
+                      "Could not open battery optimization settings."
+                    )
+                  }
+                />
+
+                <View className="mt-2 rounded-2xl bg-white/5 p-3">
+                  <Text className="text-sm font-black text-white">
+                    Pause / resume on Bluetooth disconnect
+                  </Text>
+                  <Text className="mt-0.5 text-xs text-white/60">
+                    Requires a native Bluetooth-state module not available in Expo Go. Enable
+                    after switching to a prebuild.
+                  </Text>
+                </View>
               </View>
             ) : (
               <View className="mb-8" />

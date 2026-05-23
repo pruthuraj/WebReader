@@ -15,7 +15,8 @@
 | TTS Settings Priority 1 (play / pause / resume / stop, speed, pitch, language, voice, sleep, auto-play, sentence highlight, double-tap-to-read) | various   | done   |
 | Phase D · Local-only Dashboard (D1–D4)                                                                                                          | `f5a2347` | done   |
 | TTS Settings Priority 2 (cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight)                                    | `6151260` | done   |
-| TTS Settings Priority 3 (pronunciation rules CRUD + schema v2 + dedicated screen)                                                               | _pending commit_ | done   |
+| TTS Settings Priority 3 (pronunciation rules CRUD + schema v2 + dedicated screen)                                                               | `326cf3e` | done   |
+| TTS Settings Priority 4 (Android intents, playlist, auto-advance, background-playback flag, network-voice hint)                                 | _pending commit_ | done   |
 
 ## Remaining work — by group
 
@@ -100,7 +101,27 @@ Largest single piece of remaining Phase 1 work. Introduces a new SQLite table an
 
 ---
 
-### Group D · TTS Settings Priority 4 — Device + Engine
+### Group D · TTS Settings Priority 4 — Device + Engine **(SHIPPED, partial)**
+
+**Status:** done for everything that fits Expo Go. Bluetooth pause/resume and the Android foreground-service for true background playback both need a prebuild and are documented as future work.
+
+**Shipped:**
+- `services/intent.ts` wraps `expo-intent-launcher` with `openTtsSettings`, `openVoiceDataSettings`, `openBatteryOptimization`, `openGoogleTtsListing`. Each call no-ops on iOS and returns a boolean so UI can show a toast on failure.
+- `stores/playlistStore.ts` — in-memory `usePlaylistStore` with `queue`, `enqueue`, `enqueueMany`, `removeAt`, `removeByKey`, `clear`, `popNext`, `has`. No DB persistence (Phase 2).
+- Reader auto-advance: when TTS transitions playing/paused → idle, the reader pops the next playlist item or, if `autoPlayNext` is on, navigates to `neighbors.next`. Suppressed when sleep timer is `"eoc"`.
+- TTS sheet additions:
+  - Listening queue section (count display + Add current + Add next + Clear queue).
+  - Device & engine collapsible section with: Background playback toggle (stored in `ttsDefaults.backgroundPlayback`, doc-only behavior until prebuild), Open TTS engine settings, Download more voices, Update Google TTS engine, Disable battery optimization. All four intents disabled with hint on iOS.
+  - Bluetooth pause/resume row rendered as a static note explaining the native-module gap.
+  - Voice picker labels enhanced voices with a `· HQ` suffix and includes a Wi-Fi caveat line.
+- `ttsDefaults` gains `backgroundPlayback: boolean` (default false), wired through `mergeTtsDefaults`.
+
+**Still future work** (track here, not in a new group):
+- Real Bluetooth pause/resume — needs `react-native-bluetooth-state-manager` (or platform listeners) and a prebuild. Permission-gate `BLUETOOTH_CONNECT`.
+- iOS background playback — `app.json` `ios.infoPlist.UIBackgroundModes: ["audio"]` + `expo-av`/`expo-audio` `AVAudioSession` category `playback`.
+- Android foreground service for background playback — small native module or `expo-task-manager` with FGS notification.
+- Per-voice "needs Wi-Fi" detection — `expo-speech` does not expose `networkConnectionRequired`. Shipped fallback is the `HQ` suffix + a generic note.
+- Pronunciation import/export (still deferred from Group C).
 
 **Source of truth:** [TTS_SETTINGS.md](./TTS_SETTINGS.md) sections 2 / 6 / 8.
 
@@ -168,8 +189,8 @@ When any of these stop being "Phase 2", move the relevant row into the phase doc
 1. ~~**Group A (Phase D)**~~ — **shipped.** Skip.
 2. ~~**Group B (TTS P2)**~~ — **shipped.** Skip.
 3. ~~**Group C (TTS P3 pronunciation)**~~ — **shipped.** Skip.
-4. **Group E residuals** — interleave with Group D, one or two per commit.
-5. **Group D (TTS P4 device + engine)** — last, because it touches native config and permissions.
+4. ~~**Group D (TTS P4 device + engine)**~~ — **shipped** (partial, see notes). Skip the remaining native-only items until a prebuild is on the table.
+5. **Group E residuals** — only item still in scope for Phase 1. Pick off as polish.
 
 Each group exits when its own bullets pass, **and** the four standing static checks stay green:
 

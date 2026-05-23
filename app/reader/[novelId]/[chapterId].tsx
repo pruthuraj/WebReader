@@ -10,6 +10,8 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
+import * as Brightness from "expo-brightness";
+import * as KeepAwake from "expo-keep-awake";
 import { ChapterHeader } from "@/components/reader/ChapterHeader";
 import { ChapterNavigation } from "@/components/reader/ChapterNavigation";
 import { ReaderContent } from "@/components/reader/ReaderContent";
@@ -95,6 +97,41 @@ export default function ReaderScreen() {
       }
     };
   }, [chapterId, novelId, recordChapterRead, setCurrent]);
+
+  useEffect(() => {
+    const initial = useReaderStore.getState().appearance;
+    void (async () => {
+      try {
+        if (initial.brightness !== null) {
+          await Brightness.setBrightnessAsync(initial.brightness);
+        }
+      } catch {
+        // Brightness denial keeps the system value — settings still persist.
+      }
+      try {
+        if (initial.keepAwake) {
+          await KeepAwake.activateKeepAwakeAsync("webreader-reader");
+        }
+      } catch {
+        // Keep-awake is best-effort on some platforms.
+      }
+    })();
+
+    return () => {
+      void (async () => {
+        try {
+          await Brightness.restoreSystemBrightnessAsync();
+        } catch {
+          // No-op — leaving the reader without restoring is acceptable.
+        }
+        try {
+          await KeepAwake.deactivateKeepAwake("webreader-reader");
+        } catch {
+          // Already inactive on platforms that ignored the activation.
+        }
+      })();
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

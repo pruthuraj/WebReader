@@ -37,18 +37,9 @@ TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/re
 
 ## What's next
 
-Groups A–D shipped. Only **Group E residuals** remain in Phase 1 (see [`docs/phaseongoing3.md`](./docs/phaseongoing3.md)):
+**Phase 1 is feature-complete.** Groups A–E all shipped; full per-item status in [`docs/phaseongoing3.md`](./docs/phaseongoing3.md).
 
-- Wi-Fi-only flag respects current network state on enable (downloader listener nudge on reconnect)
-- `auto-retry failed` actually retries `failed` rows with backoff
-- Pull-to-refresh throttle on Home
-- `chapter_read` threshold configurable via settings
-- Cover gradient palette extension
-- Brightness restore on Reader unmount
-- Keep-awake cleanup on Reader unmount
-- Search debouncing on `app/(tabs)/search.tsx`
-
-Group D Phase 1 cuts (Bluetooth pause/resume, true Android background-playback FGS, iOS `UIBackgroundModes` audio) are deferred until a prebuild is on the table — they don't fit Expo Go.
+The only deferred work is the native-prebuild slice of Group D — Bluetooth pause/resume, true Android background-playback foreground service, and iOS `UIBackgroundModes: ["audio"]` — none of which fit Expo Go. They wait until a prebuild is on the table.
 
 Phase 2+ remains out of scope: FastAPI backend, scraping, auth, cloud sync, push, bookmarks, shelves.
 

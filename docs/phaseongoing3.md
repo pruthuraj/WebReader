@@ -1,6 +1,6 @@
 # Remaining work — ongoing tracker
 
-> **Index:** [ROADMAP.md](./ROADMAP.md) · **Last shipped commit:** `644a147` (TTS Priority 4 — intents, playlist, auto-advance, device section)
+> **Index:** [ROADMAP.md](./ROADMAP.md) · **Last shipped commit:** `7da1a75` (Group E residuals — Phase 1 complete)
 > **Audience:** any agent or engineer picking up the project mid-stream. Read this top-to-bottom to know what's left.
 
 ## What's already shipped (skip)
@@ -147,20 +147,20 @@ This group is largely platform-specific. Plan one commit per sub-task; do not bu
 
 ---
 
-### Group E · Smaller residuals discovered along the way
+### Group E · Smaller residuals discovered along the way **(SHIPPED)**
 
-Independent of the four big groups. Cheap polish; can land in any later commit.
+Independent of the four big groups. All eight items landed across commits `c1fe7f4`, `52da790`, `b79cea5`, `7a53a9d`, `7da1a75`.
 
-| Item                                                    | Where                                           | Notes                                                                                                                                                               |
+| Item                                                    | Where                                           | Shipped notes                                                                                                                                                       |
 | ------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Wifi-only flag respects current network state on enable | `src/services/downloader.ts`                    | Currently the gate runs per-pick; verify it picks up state changes mid-queue. Add a `services/network` listener that nudges `downloader.poke()` on Wi-Fi reconnect. |
-| `auto-retry failed` toggle                              | `src/services/downloader.ts`                    | Toggle exists in Settings UI; ensure the worker actually retries `failed` rows after a delay (e.g., exponential backoff capped at 60s).                             |
-| Pull-to-refresh on Home triggers full repo re-query     | `app/(tabs)/index.tsx`                          | Currently calls `rows.refresh`. Confirm `useHomeRows.refresh` does not race when called rapidly; throttle if needed.                                                |
-| `chapter_read` event recording threshold                | `app/reader/[novelId]/[chapterId].tsx`          | Hardcoded `>= 0.8`. Consider making this configurable via `settings.ttsDefaults` or a top-level "Reading thresholds" section in Settings.                           |
-| Cover gradient palette                                  | `src/components/shared/CoverPlaceholder.tsx`    | Only a handful of `coverHint` values are mapped. If we add more novels in the mock or backend, extend the gradient map and document the supported hints.            |
-| Reader appearance brightness restore on unmount         | `src/components/reader/ReaderSettingsSheet.tsx` | When the user closes the app or leaves the reader, optionally restore system brightness automatically. Currently the override persists.                             |
-| Keep-awake cleanup                                      | Same                                            | Make sure `KeepAwake.deactivateKeepAwake("webreader-reader")` fires on `ReaderScreen` unmount, not only when the user toggles off.                                  |
-| Search debouncing                                       | `app/(tabs)/search.tsx`                         | Verify `recordSearch` is properly debounced; the URL param updates on every keystroke.                                                                              |
+| ~~Wifi-only flag respects current network state on enable~~ | `src/services/downloader.ts`                | `downloader.start()` now subscribes to `network` change events and triggers `tick()` on every flip. `stop()` unsubscribes.                                          |
+| ~~`auto-retry failed` toggle~~                          | `src/services/downloader.ts`                    | `maybeRetryFailed()` runs at the head of each tick. Promotes `failed` rows back to `queued` on an exponential backoff (1s, 2s, 4s, … capped at 60s). Counts in-memory; relaunch resets. |
+| ~~Pull-to-refresh on Home triggers full repo re-query~~ | `app/(tabs)/index.tsx`                          | In-flight ref guards `rows.refresh()` so rapid pulls coalesce instead of racing.                                                                                    |
+| ~~`chapter_read` event recording threshold~~            | `app/reader/[novelId]/[chapterId].tsx`          | Replaced hardcoded `0.8` with `settings.chapterReadThreshold` (default 0.8, range 0.5–1.0). Stepper added under Settings → Reading insights.                        |
+| ~~Cover gradient palette~~                              | `src/components/shared/CoverPlaceholder.tsx`    | Added sky / violet / teal / fuchsia / lime. Exported `supportedCoverHints` for enumeration.                                                                         |
+| ~~Reader appearance brightness restore on unmount~~     | `app/reader/[novelId]/[chapterId].tsx`          | Mount/unmount effect reapplies stored brightness on enter and calls `Brightness.restoreSystemBrightnessAsync()` on leave.                                           |
+| ~~Keep-awake cleanup~~                                  | `app/reader/[novelId]/[chapterId].tsx`          | Same effect calls `KeepAwake.deactivateKeepAwake("webreader-reader")` on unmount regardless of the toggle state.                                                    |
+| ~~Search debouncing~~                                   | `app/(tabs)/search.tsx`                         | **Verified clean.** `recordSearchDebounced` throttles at 1000ms via `useDebouncedCallback`; URL params update only on submit / clear / filter / sort, not per keystroke; `lastRecordedQuery` ref dedupes identical trimmed queries. |
 
 ---
 
@@ -190,7 +190,7 @@ When any of these stop being "Phase 2", move the relevant row into the phase doc
 2. ~~**Group B (TTS P2)**~~ — **shipped.** Skip.
 3. ~~**Group C (TTS P3 pronunciation)**~~ — **shipped.** Skip.
 4. ~~**Group D (TTS P4 device + engine)**~~ — **shipped** (partial, see notes). Skip the remaining native-only items until a prebuild is on the table.
-5. **Group E residuals** — only item still in scope for Phase 1. Pick off as polish.
+5. ~~**Group E residuals**~~ — **shipped.** Phase 1 is now feature-complete; the only deferred work is the native-prebuild slice of Group D documented above.
 
 Each group exits when its own bullets pass, **and** the four standing static checks stay green:
 

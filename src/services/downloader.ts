@@ -7,12 +7,21 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import type { DownloadQueueItem } from "@/data/types";
 
 const MAX_CONCURRENT = 2;
+const MAX_BACKOFF_MS = 60_000;
 let started = false;
 let timer: ReturnType<typeof setInterval> | null = null;
+let networkUnsubscribe: (() => void) | null = null;
 const running = new Set<string>();
+// In-memory retry book-keeping. Not persisted — a relaunch resets attempts,
+// which is the desired behavior for Phase 1.
+const retryState = new Map<string, { attempts: number; nextAttemptAt: number }>();
 
 function key(item: Pick<DownloadQueueItem, "novelId" | "chapterId">) {
   return `${item.novelId}::${item.chapterId}`;
+}
+
+function backoffMs(attempts: number) {
+  return Math.min(MAX_BACKOFF_MS, 1000 * 2 ** Math.max(0, attempts - 1));
 }
 
 async function processItem(item: DownloadQueueItem) {
@@ -33,7 +42,14 @@ async function processItem(item: DownloadQueueItem) {
 
     await chapterRepo.setBody(item.novelId, item.chapterId, chapter.body);
     await downloadQueueRepo.setStatus(item.novelId, item.chapterId, "done");
+    retryState.delete(id);
   } catch (error) {
+    const previous = retryState.get(id);
+    const attempts = (previous?.attempts ?? 0) + 1;
+    retryState.set(id, {
+      attempts,
+      nextAttemptAt: Date.now() + backoffMs(attempts),
+    });
     await downloadQueueRepo.setStatus(
       item.novelId,
       item.chapterId,
@@ -46,7 +62,24 @@ async function processItem(item: DownloadQueueItem) {
   }
 }
 
+async function maybeRetryFailed() {
+  if (!useSettingsStore.getState().settings.autoRetryFailed) return;
+  const failed = await downloadQueueRepo.listByStatus("failed");
+  if (!failed.length) return;
+  const now = Date.now();
+  let promoted = 0;
+  for (const item of failed) {
+    const entry = retryState.get(key(item));
+    if (entry && entry.nextAttemptAt > now) continue;
+    await downloadQueueRepo.setStatus(item.novelId, item.chapterId, "queued");
+    promoted += 1;
+  }
+  if (promoted) await useDownloadStore.getState().refresh();
+}
+
 async function tick() {
+  await maybeRetryFailed();
+
   if (running.size >= MAX_CONCURRENT) return;
 
   const wifiOnly = useSettingsStore.getState().settings.wifiOnlyDownloads;
@@ -66,6 +99,9 @@ export const downloader = {
     started = true;
     await downloadQueueRepo.resetDownloadingToQueued();
     timer = setInterval(() => void tick(), 500);
+    networkUnsubscribe = network.subscribe(() => {
+      void tick();
+    });
     void tick();
   },
 
@@ -73,6 +109,8 @@ export const downloader = {
     started = false;
     if (timer) clearInterval(timer);
     timer = null;
+    networkUnsubscribe?.();
+    networkUnsubscribe = null;
   },
 
   poke() {

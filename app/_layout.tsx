@@ -66,6 +66,10 @@ export default function RootLayout() {
               options={{ title: "Reader", headerBackTitle: "Back" }}
             />
             <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
+            <Stack.Screen
+              name="tts-pronunciation"
+              options={{ title: "Pronunciation rules" }}
+            />
           </Stack>
         </ThemeProvider>
       </SafeAreaProvider>

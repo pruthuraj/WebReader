@@ -58,3 +58,19 @@ export interface AnalyticsEvent {
   chapterId?: string | null;
   createdAt: number;
 }
+
+export interface PronunciationRule {
+  id: number;
+  pattern: string;
+  isRegex: boolean;
+  replacement: string;
+  language: string | null;
+  caseSensitive: boolean;
+  enabled: boolean;
+  category: string | null;
+  updatedAt: number;
+}
+
+export type NewPronunciationRule = Omit<PronunciationRule, "id" | "updatedAt"> & {
+  id?: number;
+};

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { Modal, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Animated from "react-native-reanimated";
+import { useRouter } from "expo-router";
 import type { Voice } from "expo-speech";
 import { useAnimatedSheet } from "@/hooks/useAnimatedSheet";
+import { pronunciationRepo } from "@/db/repositories/pronunciationRepo";
 import { tts } from "@/services/tts";
 import {
   defaultTtsCleaning,
@@ -163,13 +165,25 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
   const settings = useSettingsStore((s) => s.settings);
   const updateSettings = useSettingsStore((s) => s.update);
   const { backdropStyle, sheetStyle } = useAnimatedSheet(visible);
+  const router = useRouter();
   const [voices, setVoices] = useState<Voice[]>([]);
   const [showCleaning, setShowCleaning] = useState(false);
+  const [pronunciationCounts, setPronunciationCounts] = useState({ total: 0, enabled: 0 });
 
   useEffect(() => {
     if (!visible) return;
-    tts.getVoices().then(setVoices);
+    void tts.getVoices().then(setVoices);
+    void Promise.all([pronunciationRepo.count(), pronunciationRepo.countEnabled()]).then(
+      ([total, enabled]) => setPronunciationCounts({ total, enabled })
+    );
   }, [visible]);
+
+  const openPronunciation = () => {
+    onClose();
+    // Typed routes file does not refresh until next `expo start`.
+    // Cast keeps tsc happy; the route resolves at runtime.
+    router.push("/tts-pronunciation" as never);
+  };
 
   const ttsDefaults = settings.ttsDefaults;
   const cleaning = ttsDefaults.cleaning ?? defaultTtsCleaning;
@@ -342,6 +356,26 @@ export function TTSSettingsSheet({ visible, onClose }: TTSSettingsSheetProps) {
                 />
               ))}
             </View>
+
+            <Pressable
+              onPress={openPronunciation}
+              accessibilityRole="button"
+              accessibilityLabel="Open pronunciation rules"
+              className="mb-2 mt-1 flex-row items-center rounded-2xl bg-white/5 p-3 active:opacity-75"
+            >
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
+                <Feather name="mic" size={16} color="#FDE68A" />
+              </View>
+              <View className="ml-3 flex-1 pr-2">
+                <Text className="text-sm font-black text-white">Pronunciation rules</Text>
+                <Text className="mt-0.5 text-xs text-white/60">
+                  {pronunciationCounts.total === 0
+                    ? "None yet — fix awkward TTS pronunciations."
+                    : `${pronunciationCounts.enabled} active · ${pronunciationCounts.total} total`}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={18} color="rgba(248, 250, 252, 0.5)" />
+            </Pressable>
 
             <ToggleRow
               label="Auto-start on chapter open"

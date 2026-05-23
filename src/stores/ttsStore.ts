@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { pronunciationRepo } from "@/db/repositories/pronunciationRepo";
 import { tts } from "@/services/tts";
 import { useSettingsStore } from "@/stores/settingsStore";
 
@@ -74,12 +75,18 @@ function armSleepTimer(
   }, 1000);
 }
 
-function playbackOptions(
+async function playbackOptions(
   state: TtsState,
   set: (partial: Partial<TtsState>) => void,
   meta?: { novelId?: string | null; chapterId?: string | null }
 ) {
   const ttsDefaults = useSettingsStore.getState().settings.ttsDefaults;
+  let pronunciationRules: Awaited<ReturnType<typeof pronunciationRepo.listEnabledForLanguage>> = [];
+  try {
+    pronunciationRules = await pronunciationRepo.listEnabledForLanguage(state.language);
+  } catch {
+    // Pronunciation table may not exist on a freshly-migrated DB; skip silently.
+  }
   return {
     speed: state.speed,
     pitch: state.pitch,
@@ -90,6 +97,7 @@ function playbackOptions(
     pauseMs: ttsDefaults.sentencePauseMs,
     cleaning: ttsDefaults.cleaning,
     splitOnCommas: ttsDefaults.highlightMode === "comma",
+    pronunciationRules,
     onSentence: (idx: number | null) => state.setHighlight(idx),
     onEnd: () => {
       clearSleepTimer(set);
@@ -127,13 +135,15 @@ export const useTtsStore = create<TtsState>((set, get) => ({
   play: async (text, meta) => {
     const state = get();
     set({ status: "playing", highlightSentenceIdx: 0 });
-    await tts.play(text, playbackOptions(state, set, meta));
+    const options = await playbackOptions(state, set, meta);
+    await tts.play(text, options);
     armSleepTimer(state.sleepTimerSec, set, get);
   },
   playFromSentence: async (text, sentenceIndex, meta) => {
     const state = get();
     set({ status: "playing", highlightSentenceIdx: sentenceIndex });
-    await tts.playFromSentence(text, sentenceIndex, playbackOptions(state, set, meta));
+    const options = await playbackOptions(state, set, meta);
+    await tts.playFromSentence(text, sentenceIndex, options);
     armSleepTimer(state.sleepTimerSec, set, get);
   },
   previousSentence: async () => {

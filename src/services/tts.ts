@@ -1,5 +1,6 @@
 import * as Speech from "expo-speech";
 import { eventRepo } from "@/db/repositories/eventRepo";
+import type { PronunciationRule } from "@/data/types";
 import type { TtsCleaningToggles } from "@/stores/settingsStore";
 
 export type TtsRuntimeStatus = "idle" | "playing" | "paused";
@@ -14,6 +15,7 @@ export interface TtsPlayOptions {
   pauseMs?: number;
   cleaning?: TtsCleaningToggles;
   splitOnCommas?: boolean;
+  pronunciationRules?: PronunciationRule[];
   onSentence?: (idx: number | null) => void;
   onEnd?: () => void;
 }
@@ -58,21 +60,51 @@ const SPACED_UPPER_REGEX = /\b(?:[A-Z](?:\s[A-Z]){2,})\b/g;
 const LINE_BREAK_HYPHEN_REGEX = /-\s*\n\s*/g;
 const SYMBOL_KEEP_REGEX = /[^\p{L}\p{N}\s.,!?;:'"\-()\[\]]/gu;
 
-export function cleanSentence(input: string, opts?: TtsCleaningToggles): string {
-  if (!opts) return input;
-  let out = input;
-  if (opts.lineBreakHyphens) out = out.replace(LINE_BREAK_HYPHEN_REGEX, "");
-  if (opts.urls) out = out.replace(URL_REGEX, "");
-  if (opts.brackets) out = out.replace(SQUARE_BRACKET_REGEX, "");
-  if (opts.parens) out = out.replace(PAREN_REGEX, "");
-  if (opts.linkedRefs) out = out.replace(LINKED_REF_REGEX, " ");
-  if (opts.spacedUppercase) {
-    out = out.replace(SPACED_UPPER_REGEX, (match) => match.replace(/\s/g, ""));
+function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function applyPronunciationRule(input: string, rule: PronunciationRule): string {
+  if (!rule.pattern) return input;
+  try {
+    if (rule.isRegex) {
+      const flags = rule.caseSensitive ? "g" : "gi";
+      return input.replace(new RegExp(rule.pattern, flags), rule.replacement);
+    }
+    const flags = rule.caseSensitive ? "g" : "gi";
+    return input.replace(new RegExp(escapeRegex(rule.pattern), flags), rule.replacement);
+  } catch {
+    // Bad regex from the user — skip silently. Editor UI should validate first.
+    return input;
   }
-  if (opts.superscript) out = out.replace(SUPERSCRIPT_REGEX, "");
-  if (opts.emojis) out = out.replace(EMOJI_REGEX, "");
-  if (opts.hyphens) out = out.replace(/-/g, " ");
-  if (opts.symbols) out = out.replace(SYMBOL_KEEP_REGEX, "");
+}
+
+export function cleanSentence(
+  input: string,
+  opts?: TtsCleaningToggles,
+  rules?: PronunciationRule[]
+): string {
+  let out = input;
+  if (opts) {
+    if (opts.lineBreakHyphens) out = out.replace(LINE_BREAK_HYPHEN_REGEX, "");
+    if (opts.urls) out = out.replace(URL_REGEX, "");
+    if (opts.brackets) out = out.replace(SQUARE_BRACKET_REGEX, "");
+    if (opts.parens) out = out.replace(PAREN_REGEX, "");
+    if (opts.linkedRefs) out = out.replace(LINKED_REF_REGEX, " ");
+    if (opts.spacedUppercase) {
+      out = out.replace(SPACED_UPPER_REGEX, (match) => match.replace(/\s/g, ""));
+    }
+    if (opts.superscript) out = out.replace(SUPERSCRIPT_REGEX, "");
+    if (opts.emojis) out = out.replace(EMOJI_REGEX, "");
+    if (opts.hyphens) out = out.replace(/-/g, " ");
+    if (opts.symbols) out = out.replace(SYMBOL_KEEP_REGEX, "");
+  }
+  if (rules && rules.length) {
+    for (const rule of rules) {
+      if (!rule.enabled) continue;
+      out = applyPronunciationRule(out, rule);
+    }
+  }
   return out.replace(/\s+/g, " ").trim();
 }
 
@@ -183,7 +215,9 @@ async function cancelActive(recordEvent: boolean) {
 async function startPlayback(text: string, options: TtsPlayOptions, startIndex: number) {
   await cancelActive(false);
   const sentences = splitSentences(text, { commaMode: options.splitOnCommas });
-  const spokenSentences = sentences.map((s) => cleanSentence(s, options.cleaning));
+  const spokenSentences = sentences.map((s) =>
+    cleanSentence(s, options.cleaning, options.pronunciationRules)
+  );
   const clampedIndex = Math.max(0, Math.min(sentences.length - 1, startIndex));
   active = {
     sentences,

@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const MIGRATIONS: string[] = [
   `
@@ -64,5 +64,22 @@ export const MIGRATIONS: string[] = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  `,
+  `
+  CREATE TABLE IF NOT EXISTS pronunciation_rules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    pattern TEXT NOT NULL,
+    is_regex INTEGER NOT NULL DEFAULT 0,
+    replacement TEXT NOT NULL,
+    language TEXT,
+    case_sensitive INTEGER NOT NULL DEFAULT 0,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    category TEXT,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pronun_enabled_lang
+    ON pronunciation_rules(enabled, language);
+  CREATE INDEX IF NOT EXISTS idx_pronun_category
+    ON pronunciation_rules(category);
   `,
 ];

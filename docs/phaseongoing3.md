@@ -14,7 +14,8 @@
 | Bottom tabs + reader header redesign (⋮ menu, chapter chevrons)                                                                                 | `344b4f8` | done   |
 | TTS Settings Priority 1 (play / pause / resume / stop, speed, pitch, language, voice, sleep, auto-play, sentence highlight, double-tap-to-read) | various   | done   |
 | Phase D · Local-only Dashboard (D1–D4)                                                                                                          | `f5a2347` | done   |
-| TTS Settings Priority 2 (cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight)                                    | _pending commit_ | done   |
+| TTS Settings Priority 2 (cleaning toggles, sentence pause, auto-start, EOC sleep, paragraph/comma highlight)                                    | `6151260` | done   |
+| TTS Settings Priority 3 (pronunciation rules CRUD + schema v2 + dedicated screen)                                                               | _pending commit_ | done   |
 
 ## Remaining work — by group
 
@@ -60,7 +61,21 @@ The four groups below are independent. Pick one at a time; do not interleave.
 
 ---
 
-### Group C · TTS Settings Priority 3 — Pronunciation Correction
+### Group C · TTS Settings Priority 3 — Pronunciation Correction **(SHIPPED)**
+
+**Status:** done. Schema v2 + repo + screen + cleaner integration landed in a single commit on top of `6151260`. Import/export deferred (optional/last per spec).
+
+**Shipped:**
+- Schema v2: `pronunciation_rules` table (id PK auto, pattern, is_regex, replacement, language, case_sensitive, enabled, category, updated_at) + `idx_pronun_enabled_lang` + `idx_pronun_category`. Migration runner picks up version 1 → 2 cleanly.
+- `pronunciationRepo`: `listAll`, `listEnabledForLanguage(lang)` (matches by full code or 2-char root), `search(query)`, `getById`, `upsert`, `setEnabled`, `remove`, `categories`, `count`, `countEnabled`.
+- Cleaner: `cleanSentence(input, toggles, rules)` runs enabled rules after the regex toggle pipeline. Honors `is_regex` + `case_sensitive`; literal patterns are regex-escaped; bad user regex is silently skipped.
+- `ttsStore.playbackOptions` is now async and pulls `pronunciationRepo.listEnabledForLanguage(state.language)` before each `play`/`playFromSentence`.
+- Route: `app/tts-pronunciation.tsx` (root stack, no tabs). Search bar, category filter chips, per-row enable/edit/delete, FAB → modal editor with live preview against a fixed sample sentence.
+- TTS sheet entry row: `Pronunciation rules → N active · M total` row pushes to the new screen and closes the sheet.
+
+**Known typed-routes quirk:** `expo-router` regenerates `.expo/types/router.d.ts` on `expo start`, not on `expo export`. The new `/tts-pronunciation` route is added to the d.ts only after the next `npm run start`. `TTSSettingsSheet` casts the route string to `never` so tsc passes in the meantime.
+
+**Out of scope this commit (still queued):** import/export of rule sets (`src/services/pronunciation-io.ts` + `expo-document-picker`).
 
 **Source of truth:** [TTS_SETTINGS.md](./TTS_SETTINGS.md) section 3.
 
@@ -152,8 +167,8 @@ When any of these stop being "Phase 2", move the relevant row into the phase doc
 
 1. ~~**Group A (Phase D)**~~ — **shipped.** Skip.
 2. ~~**Group B (TTS P2)**~~ — **shipped.** Skip.
-3. **Group E residuals** — interleave between Groups B and C, one or two per commit.
-4. **Group C (TTS P3 pronunciation)** — schema bump + new screen, sized as its own multi-commit chunk.
+3. ~~**Group C (TTS P3 pronunciation)**~~ — **shipped.** Skip.
+4. **Group E residuals** — interleave with Group D, one or two per commit.
 5. **Group D (TTS P4 device + engine)** — last, because it touches native config and permissions.
 
 Each group exits when its own bullets pass, **and** the four standing static checks stay green:

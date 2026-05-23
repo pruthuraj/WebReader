@@ -197,6 +197,28 @@ export default function SettingsScreen() {
 
       <SettingsSection title="Reading insights">
         <SettingsRow
+          type="stepper"
+          label="Chapter-read threshold"
+          subtitle="Percent scrolled before a chapter counts toward dashboard stats."
+          value={`${Math.round(settings.chapterReadThreshold * 100)}%`}
+          onMinus={() =>
+            updateSettings({
+              chapterReadThreshold: Math.max(
+                0.5,
+                Math.round((settings.chapterReadThreshold - 0.05) * 100) / 100
+              ),
+            })
+          }
+          onPlus={() =>
+            updateSettings({
+              chapterReadThreshold: Math.min(
+                1,
+                Math.round((settings.chapterReadThreshold + 0.05) * 100) / 100
+              ),
+            })
+          }
+        />
+        <SettingsRow
           type="tap"
           label="Open dashboard"
           subtitle="On-device reading metrics. No network calls."

@@ -92,7 +92,8 @@ export default function ReaderScreen() {
     return () => {
       setCurrent(null, null);
       const percent = savedPercentRef.current;
-      if (percent >= 0.8) {
+      const threshold = useSettingsStore.getState().settings.chapterReadThreshold;
+      if (percent >= threshold) {
         void recordChapterRead(novelId, chapterId, Date.now() - mountedAt.current, percent);
       }
     };

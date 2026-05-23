@@ -59,6 +59,9 @@ export interface AppSettings {
   ttsDefaults: TtsDefaults;
   wifiOnlyDownloads: boolean;
   autoRetryFailed: boolean;
+  // Percent (0-1) of a chapter that must scroll past before unmount logs a
+  // `chapter_read` event. Was hardcoded to 0.8.
+  chapterReadThreshold: number;
   devMode: boolean;
 }
 
@@ -67,6 +70,7 @@ export const defaultSettings: AppSettings = {
   ttsDefaults: { ...defaultTtsDefaults },
   wifiOnlyDownloads: false,
   autoRetryFailed: true,
+  chapterReadThreshold: 0.8,
   devMode: __DEV__,
 };
 

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
 import { ContinueReadingRow } from "@/components/home/ContinueReadingRow";
 import { DownloadedNovelsRow } from "@/components/home/DownloadedNovelsRow";
@@ -10,11 +10,18 @@ import { useHomeRows } from "@/hooks/useHomeRows";
 export default function HomeScreen() {
   const rows = useHomeRows();
   const [refreshing, setRefreshing] = useState(false);
+  const inFlightRef = useRef(false);
 
   const onRefresh = async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     setRefreshing(true);
-    await rows.refresh();
-    setRefreshing(false);
+    try {
+      await rows.refresh();
+    } finally {
+      setRefreshing(false);
+      inFlightRef.current = false;
+    }
   };
 
   return (

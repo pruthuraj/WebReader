@@ -1,13 +1,23 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { Text, View } from "react-native";
 
+// Supported coverHint values. The mock catalogue uses the first five; the rest
+// are pre-mapped so a future backend or expanded mock can reach for them
+// without a code change. Unknown hints fall back to the slate-on-navy default.
 const gradients: Record<string, readonly [string, string]> = {
   "gradient-indigo": ["#4338CA", "#111827"],
   "gradient-slate": ["#475569", "#020617"],
   "gradient-emerald": ["#047857", "#052E16"],
   "gradient-amber": ["#D97706", "#451A03"],
   "gradient-rose": ["#BE123C", "#3F0A17"],
+  "gradient-sky": ["#0369A1", "#082F49"],
+  "gradient-violet": ["#6D28D9", "#1E1B4B"],
+  "gradient-teal": ["#0F766E", "#042F2E"],
+  "gradient-fuchsia": ["#A21CAF", "#3B0764"],
+  "gradient-lime": ["#65A30D", "#1A2E05"],
 };
+
+export const supportedCoverHints = Object.keys(gradients);
 
 function initials(title: string) {
   return title

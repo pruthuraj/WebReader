@@ -66,6 +66,14 @@ unreachable, so the backend is optional for the app to function.
 | GET | `/sources` | `{ version, sources: [config…] }` — the whole bundle |
 | GET | `/sources/{id}` | one config |
 | GET | `/sources/{id}/validate` | run config sanity checks |
+| POST | `/sources/test` | dry-run a config against the live source; returns samples |
+
+`POST /sources/test` body: `{ "config": <SourceConfig>, "query": "mage" }`. It
+validates the config, then fetches search → first details → first chapter and
+returns small **samples** (search count + first result, novel title/author/cover
++ chapter count, and a ~500-char body excerpt). Returns samples only; it never
+stores or redistributes content. `dry_run.py` mirrors the on-device TS engine
+(src/sources/engine.ts) using selectolax.
 
 ## Deploy (manual)
 

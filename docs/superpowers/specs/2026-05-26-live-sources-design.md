@@ -151,7 +151,7 @@ backend/
 │   ├── models.py          # pydantic SourceConfig (canonical schema)
 │   ├── registry.py        # load/serve config JSONs from backend/configs/*.json
 │   ├── validate.py        # schema + selector sanity (non-empty, valid @attr form)
-│   └── test_source.py     # POST /sources/test runner
+│   └── dry_run.py         # POST /sources/test runner (named dry_run so pytest doesn't collect it)
 ├── configs/               # published adapter configs (royalroad.json, …)
 ├── tests/                 # pytest: schema validation, /sources/test against a saved fixture
 ├── requirements.txt       # fastapi, uvicorn, httpx, selectolax (or beautifulsoup4)

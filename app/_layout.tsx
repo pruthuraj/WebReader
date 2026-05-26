@@ -67,6 +67,8 @@ export default function RootLayout() {
             />
             <Stack.Screen name="dashboard" options={{ title: "Dashboard" }} />
             <Stack.Screen name="sources" options={{ title: "Sources" }} />
+            <Stack.Screen name="shelves" options={{ title: "Shelves" }} />
+            <Stack.Screen name="shelf/[id]" options={{ title: "Shelf" }} />
             <Stack.Screen
               name="tts-pronunciation"
               options={{ title: "Pronunciation rules" }}

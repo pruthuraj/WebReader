@@ -15,7 +15,8 @@ The single source of design truth for screens and responsibilities is [`SPEC.md`
 | C     | Polish: reader settings sheet, TTS, downloader, animations | planned              | [PHASE_C.md](./PHASE_C.md) | Settings persist; TTS plays; downloads queue/retry    |
 | D     | Local-only Dashboard from `events` table                   | planned              | [PHASE_D.md](./PHASE_D.md) | Metrics non-zero after real usage                     |
 | 2a    | Live Sources — on-device adapters + config registry        | **implemented** (`phase-2a-live-sources`) | [PHASE_2A.md](./PHASE_2A.md) | Search/read a real Royal Road novel on device; backend deployed |
-| 2b+   | Bookmarks, shelves, cloud sync, push (auth permanently out) | **out of scope**     | —                          | —                                                     |
+| 2c    | Bookmarks + Shelves (app-side library)                     | **implemented** (`phase-2c-bookmarks-shelves`) | [PHASE_2C.md](./PHASE_2C.md) | Bookmark a spot + jump back; add a novel to a shelf |
+| 2d+   | Cloud sync, push, aggregate search (auth permanently out)  | **out of scope**     | —                          | —                                                     |
 
 ## Navigation shell
 

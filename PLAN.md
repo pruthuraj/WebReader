@@ -17,6 +17,7 @@
 | `326cf3e` | TTS Priority 3 — pronunciation rules CRUD + schema v2 + dedicated screen |
 | `644a147` | TTS Priority 4 — Android intents, playlist, auto-advance, background-playback flag, network-voice hint |
 | Phase 2a (`phase-2a-live-sources`) | Live Sources — on-device adapter engine, async catalogue facade, Royal Road config, FastAPI config registry + dry-run, Sources screen, Search/Browse tab. See [docs/PHASE_2A.md](./docs/PHASE_2A.md). |
+| Phase 2c (`phase-2c-bookmarks-shelves`) | Bookmarks + Shelves — schema v4, reader bookmark + jump, NovelDetails bookmarks, add-to-shelf sheet, Shelves/ShelfDetail screens, Home entry. App-side only. See [docs/PHASE_2C.md](./docs/PHASE_2C.md). |
 
 TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/resume and Android foreground-service deferred until a prebuild lands; tracked in `docs/phaseongoing3.md` Group D notes).
 
@@ -42,9 +43,11 @@ TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/re
 
 **Phase 2a — Live Sources is implemented** on branch `phase-2a-live-sources` (S1–S9; [docs/PHASE_2A.md](./docs/PHASE_2A.md)). Real content fetched live from real sources (Royal Road reference) via on-device declarative adapters behind the `catalogue` facade; a FastAPI service serves adapter **configs only**. Personal-use, on-device, robots-aware. Outstanding before merge: **deploy the backend** (manual) + **on-device QA** of the live path.
 
+**Phase 2c — Bookmarks + Shelves is implemented** on branch `phase-2c-bookmarks-shelves` (stacked on 2a; schema v3→v4). App-side only. Outstanding before merge: on-device QA.
+
 Still deferred:
 - Native-prebuild slice of Group D — Bluetooth pause/resume, Android background foreground-service, iOS `UIBackgroundModes: ["audio"]` — none fit Expo Go.
-- Other Phase 2 slices: bookmarks, shelves, cloud sync, push, aggregate multi-source search. Auth is permanently out of scope.
+- Other Phase 2 slices: cloud sync, push, aggregate multi-source search. Bookmark notes + shelf rename are small follow-ups (see PHASE_2C). Auth is permanently out of scope.
 
 ## Static checks (every commit)
 

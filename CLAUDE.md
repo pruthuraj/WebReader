@@ -123,6 +123,8 @@ Persistence sits behind `src/db/repositories/*`:
 - `downloadQueueRepo` — queue rows (`queued | downloading | done | failed`).
 - `eventRepo` — analytics events (`search | novel_open | chapter_open | chapter_read | tts_start | tts_stop | session`). Dashboard reads from here only.
 - `kvRepo` — JSON-typed key/value bag for `settingsStore` persistence.
+- `bookmarkRepo` — explicit saved spots (Phase 2c): `(novel_id, chapter_id, scroll_offset, percent, note)`. Distinct from auto `progress`.
+- `shelfRepo` — shelves + `shelf_items` (Phase 2c): named novel collections, many-to-many, with item counts.
 
 ### State (Zustand stores in `src/stores/`)
 
@@ -133,6 +135,8 @@ Persistence sits behind `src/db/repositories/*`:
 | `settingsStore` | `readerDefaults`, `ttsDefaults`, `wifiOnlyDownloads`, `autoRetryFailed`, `devMode`. `hydrate()` reads from `kvRepo`, `update()` writes through. |
 | `downloadStore` | in-memory mirror of `download_queue`; `enqueue / retry / remove / refresh` |
 | `analyticsStore` | typed helpers (`recordSearch`, `recordNovelOpen`, `recordChapterOpen`, `recordChapterRead`) wrapping `eventRepo.record` |
+| `sourceStore` | live-source list, active-browse-source, registry refresh (Phase 2a) |
+| `libraryStore` | shelves with counts; create/rename/remove + add/remove novel (Phase 2c) |
 
 ### Services (`src/services/`)
 

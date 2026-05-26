@@ -1,5 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { Text, View } from "react-native";
+import { useState } from "react";
+import { Image, Text, View } from "react-native";
 
 // Supported coverHint values. The mock catalogue uses the first five; the rest
 // are pre-mapped so a future backend or expanded mock can reach for them
@@ -36,6 +37,27 @@ interface CoverPlaceholderProps {
 export function CoverPlaceholder({ title, coverHint, compact }: CoverPlaceholderProps) {
   const colors = gradients[coverHint ?? ""] ?? ["#334155", "#0F172A"];
   const sizeClass = compact ? "h-24 w-20" : "h-40 w-28";
+
+  // Live sources store a real cover image URL in coverHint. Render it as an
+  // image; on load failure fall through to the gradient placeholder.
+  const isUrl = !!coverHint && /^https?:\/\//i.test(coverHint);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  if (isUrl && !imageFailed) {
+    return (
+      <View
+        className={`${sizeClass} overflow-hidden rounded-lg border border-white/20 bg-slate-800`}
+      >
+        <Image
+          source={{ uri: coverHint as string }}
+          resizeMode="cover"
+          style={{ width: "100%", height: "100%" }}
+          onError={() => setImageFailed(true)}
+          accessibilityLabel={title}
+        />
+      </View>
+    );
+  }
 
   return (
     <LinearGradient

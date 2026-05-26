@@ -127,12 +127,50 @@ export function parseDetails(
   };
 }
 
-/** Parse a chapter page into its body HTML (inner HTML of the body container). */
+const HIDDEN_DECL = /(display\s*:\s*none|visibility\s*:\s*hidden)/i;
+
+/**
+ * Collect selectors hidden by the page's <style> blocks (display:none /
+ * visibility:hidden). Sites like Royal Road inject hidden decoy paragraphs to
+ * trap scrapers; these selectors let us drop them before extracting the body.
+ */
+function collectHiddenSelectors(root: HTMLElement): string[] {
+  const out: string[] = [];
+  const ruleRe = /([^{}]+)\{([^{}]*)\}/g;
+  for (const styleEl of root.querySelectorAll("style")) {
+    const css = styleEl.text || "";
+    let m: RegExpExecArray | null;
+    while ((m = ruleRe.exec(css))) {
+      if (!HIDDEN_DECL.test(m[2])) continue;
+      for (const part of m[1].split(",")) {
+        const s = part.trim();
+        if (s && !s.startsWith("@")) out.push(s);
+      }
+    }
+  }
+  return out;
+}
+
+/** Parse a chapter page into its body HTML, dropping hidden anti-scrape nodes. */
 export function parseChapterBody(html: string, sel: SourceConfig["chapter"]): string {
   const root = parse(html);
   const { selector } = splitSelector(sel.body);
   const node = selector ? root.querySelector(selector) : root;
   if (!node) throw new SourceError(`Chapter body selector matched nothing: "${sel.body}"`);
+
+  // Remove nodes hidden via the page stylesheet…
+  for (const hiddenSel of collectHiddenSelectors(root)) {
+    try {
+      for (const hidden of node.querySelectorAll(hiddenSel)) hidden.remove();
+    } catch {
+      // Unsupported selector syntax — skip it rather than fail the whole body.
+    }
+  }
+  // …and via inline style attributes.
+  for (const el of node.querySelectorAll("[style]")) {
+    if (HIDDEN_DECL.test(el.getAttribute("style") || "")) el.remove();
+  }
+
   return node.innerHTML.trim();
 }
 

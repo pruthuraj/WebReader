@@ -96,7 +96,11 @@ check(
 console.log("parseChapterBody");
 const body = parseChapterBody(read("chapter.html"), config.chapter);
 check("captures body paragraphs", body.includes("First paragraph of the body."), body.slice(0, 80));
+check("keeps second paragraph", body.includes("Second paragraph"), body.slice(0, 80));
 check("excludes site chrome", !body.includes("site chrome"), body.slice(0, 80));
+check("drops stylesheet-hidden decoy", !body.includes("DECOY paragraph"), body);
+check("drops inline-hidden decoy", !body.includes("INLINE decoy"), body);
+check("drops visibility-hidden decoy", !body.includes("Another DECOY"), body);
 
 console.log("parseRobots");
 const robots = _internal.parseRobots(

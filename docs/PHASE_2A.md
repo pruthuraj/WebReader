@@ -54,13 +54,19 @@ never touches content. Sources ship disabled; the user opts in.
 - **On-device QA** — live fetch, reader, and downloads against Royal Road on a
   real device (could not run in the build environment). Watch the typed-route
   `as never` cast on `/sources` until an `expo start` regenerates router types.
-- **Live cover images** — adapters capture real cover URLs into `coverHint`, but
-  the UI still renders gradient placeholders; real `<Image>` covers are future
-  polish.
-- **Royal Road anti-scrape text** — RR injects hidden paragraphs into bodies;
-  stripping CSS-hidden nodes needs the stylesheet (a body-cleaning pass).
 - **Schema sync** — `backend/app/models.py` (canonical) and
   `src/sources/types.ts` are hand-synced; change both together.
+
+## Polish (shipped after S9)
+
+- **Live cover images** — `CoverPlaceholder` renders an `<Image>` when
+  `coverHint` is an http(s) URL (live covers), falling back to the gradient
+  placeholder on non-URL hints or load error. One change covers ResultCard /
+  NovelHeader / NovelCard / Home rows.
+- **Hidden anti-scrape text** — `parseChapterBody` drops nodes hidden by the
+  page's `<style>` (`display:none` / `visibility:hidden`) and by inline style,
+  removing Royal Road's decoy paragraphs. Generic across sources; covered by the
+  engine fixture validation.
 
 ## Out of scope (later slices)
 

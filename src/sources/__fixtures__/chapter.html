@@ -1,10 +1,21 @@
-<!-- Synthetic chapter-page fixture. No scraped content. -->
+<!-- Synthetic chapter-page fixture. No scraped content. Includes hidden
+     anti-scrape decoys (stylesheet + inline) that the engine must drop. -->
 <html>
+  <head>
+    <style>
+      .trap-a { display:none }
+      .visible-real { color: #222 }
+      .trap-b{visibility: hidden;}
+    </style>
+  </head>
   <body>
     <div class="chapter-header">Chapter 1: Begin</div>
     <div class="chapter-content">
-      <p>First paragraph of the body.</p>
+      <p class="trap-a">DECOY paragraph hidden by stylesheet.</p>
+      <p class="visible-real">First paragraph of the body.</p>
+      <p style="display:none">INLINE decoy hidden paragraph.</p>
       <p>Second paragraph, with <em>emphasis</em>.</p>
+      <p class="trap-b">Another DECOY hidden by visibility.</p>
     </div>
     <div class="footer">site chrome that must not be captured</div>
   </body>

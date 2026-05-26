@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import { AddToShelfSheet } from "@/components/novel/AddToShelfSheet";
 import { ChapterListItem } from "@/components/novel/ChapterListItem";
 import { DescriptionBlock } from "@/components/novel/DescriptionBlock";
 import { NovelHeader } from "@/components/novel/NovelHeader";
@@ -35,6 +36,7 @@ export default function NovelDetailsScreen() {
   const [lastProgress, setLastProgress] = useState<ProgressEntry | null>(null);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
+  const [shelfOpen, setShelfOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     if (!id) return;
@@ -127,6 +129,7 @@ export default function NovelDetailsScreen() {
   }
 
   return (
+    <>
     <FlatList
       className="flex-1 bg-slate-50 dark:bg-slate-950"
       contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
@@ -134,7 +137,12 @@ export default function NovelDetailsScreen() {
       keyExtractor={(item) => item.chapterId}
       ListHeaderComponent={
         <>
-          <NovelHeader novel={novel} onRead={openContinueOrFirst} onDownloadAll={enqueueAll} />
+          <NovelHeader
+            novel={novel}
+            onRead={openContinueOrFirst}
+            onDownloadAll={enqueueAll}
+            onAddToShelf={() => setShelfOpen(true)}
+          />
           <DescriptionBlock text={novel.description} />
           {lastProgress ? (
             <Pressable
@@ -205,5 +213,7 @@ export default function NovelDetailsScreen() {
         />
       }
     />
+      <AddToShelfSheet visible={shelfOpen} novelId={id} onClose={() => setShelfOpen(false)} />
+    </>
   );
 }

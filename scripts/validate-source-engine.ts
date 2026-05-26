@@ -15,6 +15,7 @@ import {
   parseChapterBody,
   buildSearchUrl,
   resolveUrl,
+  _internal,
 } from "../src/sources/engine";
 import type { SourceConfig } from "../src/sources/types";
 
@@ -96,6 +97,23 @@ console.log("parseChapterBody");
 const body = parseChapterBody(read("chapter.html"), config.chapter);
 check("captures body paragraphs", body.includes("First paragraph of the body."), body.slice(0, 80));
 check("excludes site chrome", !body.includes("site chrome"), body.slice(0, 80));
+
+console.log("parseRobots");
+const robots = _internal.parseRobots(
+  [
+    "# comment",
+    "User-agent: Googlebot",
+    "Disallow: /secret-bot-only",
+    "User-agent: *",
+    "Disallow: /private",
+    "Disallow: /tmp # trailing comment",
+    "Allow: /",
+  ].join("\n")
+);
+check("only wildcard-group disallows", robots.length === 2, robots);
+check("captures /private", robots.includes("/private"), robots);
+check("strips trailing comment", robots.includes("/tmp"), robots);
+check("ignores other-agent rule", !robots.includes("/secret-bot-only"), robots);
 
 if (failures > 0) {
   console.error(`\n${failures} check(s) failed.`);

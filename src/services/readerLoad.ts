@@ -15,15 +15,17 @@ export async function loadChapterBody(
     return cached;
   }
 
-  const source = catalogue.getChapter(novelId, chapterId);
-  if (!source?.body) return cached;
+  // Body not yet materialized. Resolve it through the facade, which branches on
+  // the cached chapter's sourceUrl (live adapter fetch vs. mock catalogue).
+  const body = await catalogue.getChapterBody(cached);
+  if (!body) return cached;
 
-  await chapterRepo.setBody(novelId, chapterId, source.body);
+  await chapterRepo.setBody(novelId, chapterId, body);
   await useAnalyticsStore.getState().recordChapterOpen(novelId, chapterId);
 
   return {
     ...cached,
-    body: source.body,
+    body,
     downloadedAt: Date.now(),
   };
 }

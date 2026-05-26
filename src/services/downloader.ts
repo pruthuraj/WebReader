@@ -37,10 +37,12 @@ async function processItem(item: DownloadQueueItem) {
     await downloadQueueRepo.setStatus(item.novelId, item.chapterId, "downloading");
     await useDownloadStore.getState().refresh();
 
-    const chapter = catalogue.getChapter(item.novelId, item.chapterId);
-    if (!chapter?.body) throw new Error("Chapter body missing from catalogue");
+    const chapter = await chapterRepo.getOne(item.novelId, item.chapterId);
+    if (!chapter) throw new Error("Chapter row missing");
+    const body = await catalogue.getChapterBody(chapter);
+    if (!body) throw new Error("Chapter body unavailable from source");
 
-    await chapterRepo.setBody(item.novelId, item.chapterId, chapter.body);
+    await chapterRepo.setBody(item.novelId, item.chapterId, body);
     await downloadQueueRepo.setStatus(item.novelId, item.chapterId, "done");
     retryState.delete(id);
   } catch (error) {

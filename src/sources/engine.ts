@@ -150,8 +150,66 @@ function hostOf(url: string): string {
   return m ? m[1] : url;
 }
 
-/** Rate-limited HTML GET honoring the source's userAgent + pacing. */
+function originOf(url: string): string {
+  const m = url.match(/^(https?:\/\/[^/]+)/i);
+  return m ? m[1] : url.replace(/\/+$/, "");
+}
+
+// robots.txt is fetched once per host and cached. We honor Disallow rules under
+// the wildcard (`User-agent: *`) group — respectful access, personal use.
+const robotsCache = new Map<string, Promise<string[]>>();
+
+function parseRobots(txt: string): string[] {
+  const disallow: string[] = [];
+  let active = false;
+  for (const raw of txt.split(/\r?\n/)) {
+    const line = raw.replace(/#.*$/, "").trim();
+    if (!line) continue;
+    const idx = line.indexOf(":");
+    if (idx < 0) continue;
+    const k = line.slice(0, idx).trim().toLowerCase();
+    const v = line.slice(idx + 1).trim();
+    if (k === "user-agent") active = v === "*";
+    else if (active && k === "disallow" && v) disallow.push(v);
+  }
+  return disallow;
+}
+
+function disallowedPaths(config: SourceConfig): Promise<string[]> {
+  const host = hostOf(config.baseUrl);
+  let cached = robotsCache.get(host);
+  if (!cached) {
+    cached = (async () => {
+      try {
+        const res = await fetch(`${originOf(config.baseUrl)}/robots.txt`, {
+          headers: { "User-Agent": config.userAgent ?? DEFAULT_USER_AGENT },
+        });
+        if (!res.ok) return [];
+        return parseRobots(await res.text());
+      } catch {
+        return []; // No robots.txt reachable → no restrictions inferred.
+      }
+    })();
+    robotsCache.set(host, cached);
+  }
+  return cached;
+}
+
+/** Throws if robots.txt disallows the path. Fetched outside the rate limiter. */
+export async function assertAllowed(url: string, config: SourceConfig): Promise<void> {
+  const rules = await disallowedPaths(config);
+  if (!rules.length) return;
+  const path = url.replace(/^https?:\/\/[^/]+/i, "") || "/";
+  for (const rule of rules) {
+    if (rule === "/" || path.startsWith(rule)) {
+      throw new SourceError(`Blocked by robots.txt rule "${rule}": ${path}`);
+    }
+  }
+}
+
+/** Rate-limited, robots-aware HTML GET honoring the source's userAgent + pacing. */
 export async function fetchHtml(url: string, config: SourceConfig): Promise<string> {
+  await assertAllowed(url, config);
   const gap = config.rateLimitMs ?? DEFAULT_RATE_MS;
   return rateLimited(hostOf(url), gap, async () => {
     const res = await fetch(url, {
@@ -164,3 +222,5 @@ export async function fetchHtml(url: string, config: SourceConfig): Promise<stri
     return res.text();
   });
 }
+
+export const _internal = { parseRobots, robotsCache };

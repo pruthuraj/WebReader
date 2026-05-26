@@ -73,15 +73,36 @@ export default function SearchScreen() {
     [router]
   );
 
-  const results = useMemo<Novel[]>(
-    () =>
-      catalogue.search({
-        query,
-        filters,
-        sort,
-      }),
-    [filters, query, sort]
-  );
+  const [results, setResults] = useState<Novel[]>([]);
+  const [facets, setFacets] = useState<{
+    genres: string[];
+    languages: string[];
+    sources: string[];
+  }>({ genres: [], languages: [], sources: [] });
+
+  useEffect(() => {
+    let cancelled = false;
+    void catalogue.search({ query, filters, sort }).then((next) => {
+      if (!cancelled) setResults(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [filters, query, sort]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      catalogue.availableGenres(),
+      catalogue.availableLanguages(),
+      catalogue.availableSources(),
+    ]).then(([genres, languages, sources]) => {
+      if (!cancelled) setFacets({ genres, languages, sources });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const submit = () => {
     replaceParams({ q: query, sort, ...filters });
@@ -151,9 +172,9 @@ export default function SearchScreen() {
 
       <FiltersSheet
         visible={filtersOpen}
-        genres={catalogue.availableGenres()}
-        languages={catalogue.availableLanguages()}
-        sources={catalogue.availableSources()}
+        genres={facets.genres}
+        languages={facets.languages}
+        sources={facets.sources}
         selected={filters}
         onSelect={updateFilters}
         onClose={() => setFiltersOpen(false)}

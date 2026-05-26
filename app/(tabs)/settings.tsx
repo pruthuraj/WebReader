@@ -195,6 +195,15 @@ export default function SettingsScreen() {
         />
       </SettingsSection>
 
+      <SettingsSection title="Sources">
+        <SettingsRow
+          type="tap"
+          label="Manage sources"
+          subtitle="Enable live sources to search and read beyond the bundled catalogue."
+          onPress={() => router.push("/sources" as never)}
+        />
+      </SettingsSection>
+
       <SettingsSection title="Reading insights">
         <SettingsRow
           type="stepper"

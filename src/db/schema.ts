@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const MIGRATIONS: string[] = [
   `
@@ -81,5 +81,21 @@ export const MIGRATIONS: string[] = [
     ON pronunciation_rules(enabled, language);
   CREATE INDEX IF NOT EXISTS idx_pronun_category
     ON pronunciation_rules(category);
+  `,
+  `
+  -- Phase 2a: live sources. Backend-served adapter configs cached here;
+  -- novels/chapters gain source identity + a per-chapter live-fetch URL.
+  -- Mock rows leave source_id / source_url NULL and keep working unchanged.
+  CREATE TABLE IF NOT EXISTS sources (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    config_json TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 0,
+    updated_at INTEGER NOT NULL
+  );
+
+  ALTER TABLE novels ADD COLUMN source_id TEXT;
+  ALTER TABLE chapters ADD COLUMN source_url TEXT;
   `,
 ];

@@ -8,6 +8,8 @@ export interface Novel {
   tags: string[];
   coverHint?: string | null;
   cachedAt?: number;
+  // Live-source identity. Null/undefined = legacy or mock novel.
+  sourceId?: string | null;
 }
 
 export interface Chapter {
@@ -17,6 +19,9 @@ export interface Chapter {
   title: string;
   body?: string | null;
   downloadedAt?: number | null;
+  // Absolute/relative URL the live adapter fetches to materialize `body`.
+  // Null for mock chapters (body comes from the mock catalogue).
+  sourceUrl?: string | null;
 }
 
 export type ChapterMeta = Omit<Chapter, "body">;

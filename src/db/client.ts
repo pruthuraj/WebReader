@@ -67,6 +67,8 @@ export async function resetDb() {
     DROP TABLE IF EXISTS download_queue;
     DROP TABLE IF EXISTS events;
     DROP TABLE IF EXISTS kv_settings;
+    DROP TABLE IF EXISTS pronunciation_rules;
+    DROP TABLE IF EXISTS sources;
   `);
   dbInstance = null;
   initPromise = null;

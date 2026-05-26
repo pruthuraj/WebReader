@@ -8,6 +8,7 @@ interface ChapterRow {
   title: string;
   body: string | null;
   downloaded_at: number | null;
+  source_url: string | null;
 }
 
 function rowToChapter(r: ChapterRow): Chapter {
@@ -18,22 +19,28 @@ function rowToChapter(r: ChapterRow): Chapter {
     title: r.title,
     body: r.body,
     downloadedAt: r.downloaded_at,
+    sourceUrl: r.source_url,
+  };
+}
+
+function rowToMeta(r: ChapterRow): ChapterMeta {
+  return {
+    novelId: r.novel_id,
+    chapterId: r.chapter_id,
+    idx: r.idx,
+    title: r.title,
+    downloadedAt: r.downloaded_at,
+    sourceUrl: r.source_url,
   };
 }
 
 export const chapterRepo = {
   async listByNovel(novelId: string): Promise<ChapterMeta[]> {
     const rows = await all<ChapterRow>(
-      `SELECT novel_id, chapter_id, idx, title, downloaded_at FROM chapters WHERE novel_id = ? ORDER BY idx ASC`,
+      `SELECT novel_id, chapter_id, idx, title, downloaded_at, source_url FROM chapters WHERE novel_id = ? ORDER BY idx ASC`,
       [novelId]
     );
-    return rows.map((r) => ({
-      novelId: r.novel_id,
-      chapterId: r.chapter_id,
-      idx: r.idx,
-      title: r.title,
-      downloadedAt: r.downloaded_at,
-    }));
+    return rows.map(rowToMeta);
   },
 
   async getOne(novelId: string, chapterId: string): Promise<Chapter | null> {
@@ -46,12 +53,13 @@ export const chapterRepo = {
 
   async upsertMeta(c: ChapterMeta): Promise<void> {
     await run(
-      `INSERT INTO chapters (novel_id, chapter_id, idx, title)
-       VALUES (?, ?, ?, ?)
+      `INSERT INTO chapters (novel_id, chapter_id, idx, title, source_url)
+       VALUES (?, ?, ?, ?, ?)
        ON CONFLICT(novel_id, chapter_id) DO UPDATE SET
          idx=excluded.idx,
-         title=excluded.title`,
-      [c.novelId, c.chapterId, c.idx, c.title]
+         title=excluded.title,
+         source_url=excluded.source_url`,
+      [c.novelId, c.chapterId, c.idx, c.title, c.sourceUrl ?? null]
     );
   },
 
@@ -99,25 +107,16 @@ export const chapterRepo = {
     idx: number
   ): Promise<{ prev: ChapterMeta | null; next: ChapterMeta | null }> {
     const prev = await first<ChapterRow>(
-      `SELECT novel_id, chapter_id, idx, title, downloaded_at FROM chapters
+      `SELECT novel_id, chapter_id, idx, title, downloaded_at, source_url FROM chapters
        WHERE novel_id = ? AND idx < ? ORDER BY idx DESC LIMIT 1`,
       [novelId, idx]
     );
     const next = await first<ChapterRow>(
-      `SELECT novel_id, chapter_id, idx, title, downloaded_at FROM chapters
+      `SELECT novel_id, chapter_id, idx, title, downloaded_at, source_url FROM chapters
        WHERE novel_id = ? AND idx > ? ORDER BY idx ASC LIMIT 1`,
       [novelId, idx]
     );
-    const map = (r: ChapterRow | null): ChapterMeta | null =>
-      r
-        ? {
-            novelId: r.novel_id,
-            chapterId: r.chapter_id,
-            idx: r.idx,
-            title: r.title,
-            downloadedAt: r.downloaded_at,
-          }
-        : null;
+    const map = (r: ChapterRow | null): ChapterMeta | null => (r ? rowToMeta(r) : null);
     return { prev: map(prev), next: map(next) };
   },
 };

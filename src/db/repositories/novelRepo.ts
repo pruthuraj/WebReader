@@ -11,6 +11,7 @@ interface NovelRow {
   tags: string | null;
   cover_hint: string | null;
   cached_at: number;
+  source_id: string | null;
 }
 
 function rowToNovel(r: NovelRow): Novel {
@@ -24,6 +25,7 @@ function rowToNovel(r: NovelRow): Novel {
     tags: r.tags ? (JSON.parse(r.tags) as string[]) : [],
     coverHint: r.cover_hint,
     cachedAt: r.cached_at,
+    sourceId: r.source_id,
   };
 }
 
@@ -40,8 +42,8 @@ export const novelRepo = {
 
   async upsert(n: Novel): Promise<void> {
     await run(
-      `INSERT INTO novels (id, title, author, source, language, description, tags, cover_hint, cached_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO novels (id, title, author, source, language, description, tags, cover_hint, cached_at, source_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          title=excluded.title,
          author=excluded.author,
@@ -49,7 +51,8 @@ export const novelRepo = {
          language=excluded.language,
          description=excluded.description,
          tags=excluded.tags,
-         cover_hint=excluded.cover_hint`,
+         cover_hint=excluded.cover_hint,
+         source_id=excluded.source_id`,
       [
         n.id,
         n.title,
@@ -60,6 +63,7 @@ export const novelRepo = {
         JSON.stringify(n.tags ?? []),
         n.coverHint ?? null,
         n.cachedAt ?? Date.now(),
+        n.sourceId ?? null,
       ]
     );
   },

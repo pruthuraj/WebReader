@@ -1,6 +1,6 @@
 # Phase 2a — Live Sources (design)
 
-> **Status:** approved design, pre-implementation.
+> **Status:** implemented on branch `phase-2a-live-sources` (S1–S9). See [../../PHASE_2A.md](../../PHASE_2A.md) for the as-built summary and commit map. Outstanding: backend deploy + on-device QA.
 > **Scope:** Phase 2 slices **2a (real data) + 2b (scraper)** only, reframed under a personal-use, on-device model.
 > **Supersedes:** the ROADMAP "Phase 2+" one-liner for the data/scraper portion. Auth, cloud sync, push, bookmarks, shelves remain out (separate slices / out of product scope).
 

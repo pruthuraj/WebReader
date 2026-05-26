@@ -136,11 +136,23 @@ Persistence sits behind `src/db/repositories/*`:
 
 ### Services (`src/services/`)
 
-- `catalogue.ts` — data facade (mock today, backend later).
-- `readerLoad.ts` — `loadChapterBody(novelId, chapterId)`: read from DB; if `body` is null, fetch from mock and persist. Records `chapter_open`.
+- `catalogue.ts` — **async** data facade (Phase 2a). Mock-backed browse/search by default; live sources via `searchSource` / `materializeNovel`; `getChapterBody(chapter)` branches on `chapters.source_url` (live adapter vs mock). All methods return Promises — call sites must await.
+- `readerLoad.ts` — `loadChapterBody(novelId, chapterId)`: read from DB; if `body` is null, resolve via `catalogue.getChapterBody(cached)` (mock or live) and persist. Records `chapter_open`.
 - `tts.ts` — wraps `expo-speech`. Sentence splitter, sleep-timer hookup. **Analytics contract**: `tts_start` is a marker (no `duration_ms`); `tts_stop` carries `duration_ms = stop - start`; pause/resume fold into the same span and emit nothing.
 - `downloader.ts` — queue runner with concurrency 2. Per item: read row → check `network.shouldAllowDownload(wifiOnly)` → fetch via `catalogue` → `chapterRepo.setBody` → mark `done`. Errors mark `failed`.
 - `network.ts` — `expo-network` wrapper. `isOnline()`, `isWifi()`, `shouldAllowDownload(wifiOnly)`, subscriber API.
+
+### Live sources (Phase 2a — `src/sources/`)
+
+On-device declarative adapters (LNReader/Tachiyomi model): the app fetches from a source for the user's personal reading and caches on-device only. **No server stores or redistributes content.** Sources ship disabled; the user opts in via Settings → Manage sources.
+
+- `types.ts` — `SourceConfig` (declarative selectors + `@attr` mini-language). Mirrors `backend/app/models.py` (hand-synced, no codegen).
+- `engine.ts` — generic interpreter (`parseList/parseDetails/parseChapterBody` + rate-limited, robots-aware `fetchHtml`) over `node-html-parser` (NOT cheerio — cheerio's `undici` import breaks the Metro/Hermes bundle).
+- `rateLimiter.ts` — per-host single-in-flight chain + min gap.
+- `liveSource.ts` — maps engine output to `Novel`/`ChapterMeta`; ids namespaced `"<sourceId>::<url>"`.
+- `registry.ts` — loads bundled configs + tries `EXPO_PUBLIC_REGISTRY_URL` with bundled fallback; upserts into the `sources` table (preserves the user's enabled flag).
+- `sourceRepo` / `sourceStore` / `app/sources.tsx` — persistence, state, management UI.
+- `backend/` — FastAPI service serving adapter **configs only** (`/sources`, `/sources/{id}`, `/sources/{id}/validate`, `POST /sources/test` dry-run). Never serves content. Run/deploy: `backend/README.md`. Validate offline: `npx tsx scripts/validate-source-engine.ts`.
 
 ### Theme
 

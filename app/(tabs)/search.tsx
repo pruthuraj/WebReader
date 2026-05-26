@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FiltersSheet } from "@/components/search/FiltersSheet";
 import { ResultCard } from "@/components/search/ResultCard";
@@ -9,8 +9,13 @@ import { SearchBar } from "@/components/search/SearchBar";
 import { SortControl } from "@/components/search/SortControl";
 import { catalogue, type SearchFilters, type SortKey } from "@/services/catalogue";
 import { useAnalyticsStore } from "@/stores/analyticsStore";
+import { useSourceStore } from "@/stores/sourceStore";
+import { detailsUrlFromId } from "@/sources/liveSource";
 import type { Novel } from "@/data/types";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
+
+// null = the bundled local (mock) catalogue; otherwise an enabled live source id.
+const LOCAL = "local";
 
 function firstParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0];
@@ -36,6 +41,27 @@ export default function SearchScreen() {
   const lastRecordedQuery = useRef("");
   const recordSearch = useAnalyticsStore((s) => s.recordSearch);
 
+  const allSources = useSourceStore((s) => s.sources);
+  const loadSources = useSourceStore((s) => s.load);
+  const enabledSources = useMemo(() => allSources.filter((s) => s.enabled), [allSources]);
+  // Active tab: LOCAL (mock catalogue) or an enabled live source id.
+  const [activeTab, setActiveTab] = useState<string>(LOCAL);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [opening, setOpening] = useState(false);
+
+  useEffect(() => {
+    void loadSources();
+  }, [loadSources]);
+
+  // If the active live source gets disabled elsewhere, fall back to Local.
+  useEffect(() => {
+    if (activeTab !== LOCAL && !enabledSources.some((s) => s.id === activeTab)) {
+      setActiveTab(LOCAL);
+    }
+  }, [activeTab, enabledSources]);
+
+  const isLocal = activeTab === LOCAL;
   const sort = normalizeSort(firstParam(params.sort));
   const filters: SearchFilters = useMemo(
     () => ({
@@ -80,15 +106,41 @@ export default function SearchScreen() {
     sources: string[];
   }>({ genres: [], languages: [], sources: [] });
 
+  // Debounce the query so live sources aren't hit on every keystroke.
+  const [deferredQuery, setDeferredQuery] = useState(query);
+  useEffect(() => {
+    const t = setTimeout(() => setDeferredQuery(query), 500);
+    return () => clearTimeout(t);
+  }, [query]);
+
   useEffect(() => {
     let cancelled = false;
-    void catalogue.search({ query, filters, sort }).then((next) => {
-      if (!cancelled) setResults(next);
-    });
+    setErrorMsg(null);
+    if (isLocal) {
+      setLoading(false);
+      void catalogue.search({ query: deferredQuery, filters, sort }).then((next) => {
+        if (!cancelled) setResults(next);
+      });
+    } else {
+      setLoading(true);
+      void catalogue
+        .searchSource(activeTab, deferredQuery)
+        .then((next) => {
+          if (!cancelled) setResults(next);
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setResults([]);
+          setErrorMsg(e instanceof Error ? e.message : "Couldn't reach this source.");
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+    }
     return () => {
       cancelled = true;
     };
-  }, [filters, query, sort]);
+  }, [activeTab, isLocal, deferredQuery, filters, sort]);
 
   useEffect(() => {
     let cancelled = false;
@@ -122,6 +174,32 @@ export default function SearchScreen() {
     replaceParams({ q: query, sort: nextSort, ...filters });
   };
 
+  // Live results aren't in the DB yet — materialize the novel (details +
+  // chapter list) before navigating so NovelDetails reads it from the repos.
+  const openResult = useCallback(
+    async (novel: Novel) => {
+      if (!novel.sourceId) {
+        router.push({ pathname: "/novel/[id]", params: { id: novel.id } });
+        return;
+      }
+      const detailsUrl = detailsUrlFromId(novel.id);
+      if (!detailsUrl) return;
+      setOpening(true);
+      try {
+        await catalogue.materializeNovel(novel.sourceId, detailsUrl);
+        router.push({ pathname: "/novel/[id]", params: { id: novel.id } });
+      } catch (e: unknown) {
+        Alert.alert(
+          "Couldn't open",
+          e instanceof Error ? e.message : "Failed to load this novel from its source."
+        );
+      } finally {
+        setOpening(false);
+      }
+    },
+    [router]
+  );
+
   return (
     <View className="flex-1 bg-slate-50 p-4 dark:bg-slate-950">
       <SearchBar
@@ -134,39 +212,88 @@ export default function SearchScreen() {
         onClear={clear}
       />
 
-      <View className="my-4 flex-row items-center justify-between">
-        <SortControl value={sort} onChange={updateSort} />
-        <Pressable
-          onPress={() => setFiltersOpen(true)}
-          className="ml-3 h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
-          accessibilityRole="button"
-          accessibilityLabel="Open filters"
+      {enabledSources.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="mt-3 max-h-12"
+          contentContainerStyle={{ alignItems: "center" }}
         >
-          <Feather name="sliders" size={17} color="#64748B" />
-        </Pressable>
+          {[{ id: LOCAL, name: "Local" }, ...enabledSources.map((s) => ({ id: s.id, name: s.name }))].map(
+            (tab) => {
+              const active = activeTab === tab.id;
+              return (
+                <Pressable
+                  key={tab.id}
+                  onPress={() => setActiveTab(tab.id)}
+                  className={`mr-2 rounded-full px-4 py-2 ${
+                    active ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-200 dark:bg-slate-800"
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-black ${
+                      active ? "text-white dark:text-slate-900" : "text-slate-600 dark:text-slate-300"
+                    }`}
+                  >
+                    {tab.name}
+                  </Text>
+                </Pressable>
+              );
+            }
+          )}
+        </ScrollView>
+      ) : null}
+
+      {isLocal ? (
+        <View className="my-4 flex-row items-center justify-between">
+          <SortControl value={sort} onChange={updateSort} />
+          <Pressable
+            onPress={() => setFiltersOpen(true)}
+            className="ml-3 h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            accessibilityRole="button"
+            accessibilityLabel="Open filters"
+          >
+            <Feather name="sliders" size={17} color="#64748B" />
+          </Pressable>
+        </View>
+      ) : (
+        <Text className="my-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+          {query.trim() ? "Live search" : "Browsing"} via this source. Results load
+          over the network and cache on your device when opened.
+        </Text>
+      )}
+
+      <View className="mb-3 flex-row items-center justify-between">
+        <Text className="text-xs font-bold uppercase text-slate-400">
+          {loading ? "Searching…" : `${results.length} results`}
+        </Text>
+        {loading ? <ActivityIndicator size="small" /> : null}
       </View>
 
-      <Text className="mb-3 text-xs font-bold uppercase text-slate-400">
-        {results.length} results
-      </Text>
+      {errorMsg ? (
+        <Text className="mb-3 text-xs leading-5 text-red-500">{errorMsg}</Text>
+      ) : null}
 
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ResultCard
-            novel={item}
-            onPress={() => router.push({ pathname: "/novel/[id]", params: { id: item.id } })}
-          />
-        )}
+        renderItem={({ item }) => <ResultCard novel={item} onPress={() => void openResult(item)} />}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
         ListEmptyComponent={
-          <EmptyState
-            icon="search"
-            title="No novels match"
-            subtitle="Try a different word or clear filters."
-          />
+          loading ? null : (
+            <EmptyState
+              icon="search"
+              title={errorMsg ? "Source unavailable" : "No novels match"}
+              subtitle={
+                errorMsg
+                  ? "Check your connection or try another source."
+                  : isLocal
+                    ? "Try a different word or clear filters."
+                    : "Try a different search term."
+              }
+            />
+          )
         }
       />
 
@@ -179,6 +306,17 @@ export default function SearchScreen() {
         onSelect={updateFilters}
         onClose={() => setFiltersOpen(false)}
       />
+
+      {opening ? (
+        <View className="absolute inset-0 items-center justify-center bg-black/40">
+          <View className="items-center rounded-2xl bg-white px-6 py-5 dark:bg-slate-900">
+            <ActivityIndicator />
+            <Text className="mt-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+              Loading from source…
+            </Text>
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }

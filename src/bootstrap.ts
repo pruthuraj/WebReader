@@ -7,6 +7,7 @@ import { useReaderStore } from "./stores/readerStore";
 import { useTtsStore } from "./stores/ttsStore";
 import { network } from "./services/network";
 import { downloader } from "./services/downloader";
+import { registry } from "./sources/registry";
 
 export interface BootstrapResult {
   dbReady: boolean;
@@ -26,6 +27,7 @@ export async function bootstrap(): Promise<BootstrapResult> {
   useTtsStore.getState().setLanguage(settings.ttsDefaults.language);
   useTtsStore.getState().setAutoPlayNext(settings.ttsDefaults.autoPlayNext);
   await useDownloadStore.getState().refresh();
+  await registry.refresh();
   network.start();
   await downloader.start();
   const totalEvents = await eventRepo.totalCount();

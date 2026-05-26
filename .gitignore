@@ -51,3 +51,9 @@ ruvector.db
 *.db
 .expo-export-test/
 .expo-test/
+
+# python backend
+backend/.venv/
+__pycache__/
+*.pyc
+.pytest_cache/

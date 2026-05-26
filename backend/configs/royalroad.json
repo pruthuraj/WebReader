@@ -1,0 +1,35 @@
+{
+  "id": "royalroad",
+  "name": "Royal Road",
+  "version": 1,
+  "baseUrl": "https://www.royalroad.com",
+  "lang": "en",
+  "rateLimitMs": 1500,
+  "userAgent": "WebReader/2.0 (personal use)",
+  "search": {
+    "url": "/fictions/search?title={query}",
+    "item": "div.fiction-list-item",
+    "title": "h2.fiction-title a",
+    "link": "h2.fiction-title a@href",
+    "cover": "img@src"
+  },
+  "details": {
+    "title": "h1.font-white",
+    "author": "h4 a",
+    "cover": ".cover-art-container img@src",
+    "description": "div.description",
+    "chapterItem": "tr.chapter-row",
+    "chapterTitle": "td a",
+    "chapterLink": "td a@href"
+  },
+  "chapter": {
+    "body": "div.chapter-content"
+  },
+  "browse": {
+    "url": "/fictions/best-rated",
+    "item": "div.fiction-list-item",
+    "title": "h2.fiction-title a",
+    "link": "h2.fiction-title a@href",
+    "cover": "img@src"
+  }
+}

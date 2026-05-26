@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
@@ -5,7 +6,8 @@ import { ChapterListItem } from "@/components/novel/ChapterListItem";
 import { DescriptionBlock } from "@/components/novel/DescriptionBlock";
 import { NovelHeader } from "@/components/novel/NovelHeader";
 import { EmptyState } from "@/components/shared/EmptyState";
-import type { ChapterMeta, Novel, ProgressEntry } from "@/data/types";
+import type { Bookmark, ChapterMeta, Novel, ProgressEntry } from "@/data/types";
+import { bookmarkRepo } from "@/db/repositories/bookmarkRepo";
 import { chapterRepo } from "@/db/repositories/chapterRepo";
 import { novelRepo } from "@/db/repositories/novelRepo";
 import { progressRepo } from "@/db/repositories/progressRepo";
@@ -31,22 +33,43 @@ export default function NovelDetailsScreen() {
   const [novel, setNovel] = useState<Novel | null>(null);
   const [chapters, setChapters] = useState<ChapterMeta[]>([]);
   const [lastProgress, setLastProgress] = useState<ProgressEntry | null>(null);
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [nextNovel, nextChapters, nextProgress] = await Promise.all([
+    const [nextNovel, nextChapters, nextProgress, nextBookmarks] = await Promise.all([
       novelRepo.getById(id),
       chapterRepo.listByNovel(id),
       progressRepo.lastForNovel(id),
+      bookmarkRepo.listByNovel(id),
       refreshQueue(),
     ]);
     setNovel(nextNovel);
     setChapters(nextChapters);
     setLastProgress(nextProgress);
+    setBookmarks(nextBookmarks);
     setLoading(false);
   }, [id, refreshQueue]);
+
+  const chapterTitleById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of chapters) map.set(c.chapterId, c.title);
+    return map;
+  }, [chapters]);
+
+  const openBookmark = (b: Bookmark) => {
+    router.push({
+      pathname: "/reader/[novelId]/[chapterId]",
+      params: { novelId: b.novelId, chapterId: b.chapterId, offset: String(b.scrollOffset) },
+    });
+  };
+
+  const removeBookmark = async (bookmarkId: number) => {
+    await bookmarkRepo.remove(bookmarkId);
+    setBookmarks((prev) => prev.filter((b) => b.id !== bookmarkId));
+  };
 
   useEffect(() => {
     void refresh();
@@ -125,6 +148,40 @@ export default function NovelDetailsScreen() {
                 Chapter saved at {percentLabel(lastProgress.percent)}
               </Text>
             </Pressable>
+          ) : null}
+          {bookmarks.length ? (
+            <View className="mb-5">
+              <Text className="mb-2 text-lg font-black text-slate-900 dark:text-slate-50">
+                Bookmarks
+              </Text>
+              {bookmarks.map((b) => (
+                <View
+                  key={b.id}
+                  className="mb-2 flex-row items-center rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <Pressable className="flex-1 active:opacity-70" onPress={() => openBookmark(b)}>
+                    <Text
+                      className="text-sm font-bold text-slate-900 dark:text-slate-100"
+                      numberOfLines={1}
+                    >
+                      {chapterTitleById.get(b.chapterId) ?? "Chapter"}
+                    </Text>
+                    <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      Saved at {percentLabel(b.percent)}
+                      {b.note ? ` · ${b.note}` : ""}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void removeBookmark(b.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove bookmark"
+                    className="ml-3 h-9 w-9 items-center justify-center rounded-full bg-slate-100 active:opacity-70 dark:bg-slate-800"
+                  >
+                    <Feather name="trash-2" size={16} color="#EF4444" />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
           ) : null}
           <Text className="mb-3 text-lg font-black text-slate-900 dark:text-slate-50">
             Chapters

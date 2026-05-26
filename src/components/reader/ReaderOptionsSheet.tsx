@@ -11,6 +11,7 @@ interface ReaderOptionsSheetProps {
   onClose: () => void;
   onOpenAppearance: () => void;
   onOpenTtsSettings: () => void;
+  onAddBookmark: () => void;
 }
 
 type FeatherName = ComponentProps<typeof Feather>["name"];
@@ -53,6 +54,7 @@ export function ReaderOptionsSheet({
   onClose,
   onOpenAppearance,
   onOpenTtsSettings,
+  onAddBookmark,
 }: ReaderOptionsSheetProps) {
   const router = useRouter();
   const { backdropStyle, sheetStyle } = useAnimatedSheet(visible);
@@ -103,6 +105,15 @@ export function ReaderOptionsSheet({
             label="About"
             subtitle="Novel details and description."
             onPress={goNovel}
+          />
+          <OptionRow
+            icon="bookmark"
+            label="Add bookmark"
+            subtitle="Save your current spot in this chapter."
+            onPress={() => {
+              onClose();
+              onAddBookmark();
+            }}
           />
           <OptionRow
             icon="type"

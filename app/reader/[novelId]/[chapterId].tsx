@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   InteractionManager,
   Pressable,
   ScrollView,
@@ -22,6 +23,7 @@ import { ReaderSettingsSheet } from "@/components/reader/ReaderSettingsSheet";
 import { TTSSettingsSheet } from "@/components/reader/TTSSettingsSheet";
 import { EmptyState } from "@/components/shared/EmptyState";
 import type { Chapter, ChapterMeta, Novel } from "@/data/types";
+import { bookmarkRepo } from "@/db/repositories/bookmarkRepo";
 import { chapterRepo } from "@/db/repositories/chapterRepo";
 import { novelRepo } from "@/db/repositories/novelRepo";
 import { progressRepo } from "@/db/repositories/progressRepo";
@@ -41,9 +43,11 @@ function firstParam(value: string | string[] | undefined) {
 
 export default function ReaderScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ novelId: string; chapterId: string }>();
+  const params = useLocalSearchParams<{ novelId: string; chapterId: string; offset?: string }>();
   const novelId = firstParam(params.novelId) ?? "";
   const chapterId = firstParam(params.chapterId) ?? "";
+  // When navigated from a bookmark, jump to that offset instead of saved progress.
+  const jumpOffsetParam = firstParam(params.offset);
   const appearance = useReaderStore((s) => s.appearance);
   const setCurrent = useReaderStore((s) => s.setCurrent);
   const highlightedSentenceIdx = useTtsStore((s) => s.highlightSentenceIdx);
@@ -61,6 +65,7 @@ export default function ReaderScreen() {
   const mountedAt = useRef(Date.now());
   const restored = useRef(false);
   const savedPercentRef = useRef(0);
+  const currentOffsetRef = useRef(0);
 
   const [novel, setNovel] = useState<Novel | null>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
@@ -150,7 +155,8 @@ export default function ReaderScreen() {
       setNovel(nextNovel);
       setChapter(nextChapter);
       setAllChapters(nextChapters);
-      setInitialOffset(nextProgress?.scrollOffset ?? 0);
+      const jump = jumpOffsetParam ? Number(jumpOffsetParam) : NaN;
+      setInitialOffset(Number.isFinite(jump) ? jump : nextProgress?.scrollOffset ?? 0);
       if (nextChapter) {
         setNeighbors(await chapterRepo.neighbors(novelId, nextChapter.idx));
       }
@@ -161,7 +167,7 @@ export default function ReaderScreen() {
     return () => {
       cancelled = true;
     };
-  }, [chapterId, novelId]);
+  }, [chapterId, novelId, jumpOffsetParam]);
 
   useEffect(() => {
     if (restored.current || !initialOffset || !contentHeight || loading) return;
@@ -207,6 +213,16 @@ export default function ReaderScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ttsStatus]);
 
+  const addBookmark = async () => {
+    const offset = currentOffsetRef.current;
+    const percent =
+      contentHeight > 0
+        ? Math.min(1, Math.max(0, offset / contentHeight))
+        : savedPercentRef.current;
+    await bookmarkRepo.add({ novelId, chapterId, scrollOffset: offset, percent, note: null });
+    Alert.alert("Bookmarked", "Saved your spot — find it on the novel's page.");
+  };
+
   const openChapter = (target: ChapterMeta | null) => {
     if (!target) return;
     router.replace({
@@ -251,7 +267,10 @@ export default function ReaderScreen() {
           paddingBottom: 144,
         }}
         scrollEventThrottle={80}
-        onScroll={onScroll}
+        onScroll={(e) => {
+          currentOffsetRef.current = e.nativeEvent.contentOffset.y;
+          onScroll(e);
+        }}
         onContentSizeChange={(_, height) => setContentHeight(height)}
       >
         <ChapterHeader
@@ -310,6 +329,7 @@ export default function ReaderScreen() {
         onClose={() => setOptionsOpen(false)}
         onOpenAppearance={() => setReaderSheetOpen(true)}
         onOpenTtsSettings={() => setTtsSheetOpen(true)}
+        onAddBookmark={() => void addBookmark()}
       />
 
       <Stack.Screen

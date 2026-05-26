@@ -69,6 +69,9 @@ export async function resetDb() {
     DROP TABLE IF EXISTS kv_settings;
     DROP TABLE IF EXISTS pronunciation_rules;
     DROP TABLE IF EXISTS sources;
+    DROP TABLE IF EXISTS bookmarks;
+    DROP TABLE IF EXISTS shelves;
+    DROP TABLE IF EXISTS shelf_items;
   `);
   dbInstance = null;
   initPromise = null;

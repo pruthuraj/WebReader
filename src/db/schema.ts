@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 export const MIGRATIONS: string[] = [
   `
@@ -97,5 +97,33 @@ export const MIGRATIONS: string[] = [
 
   ALTER TABLE novels ADD COLUMN source_id TEXT;
   ALTER TABLE chapters ADD COLUMN source_url TEXT;
+  `,
+  `
+  -- Phase 2c: bookmarks (explicit saved spots, distinct from auto progress)
+  -- and shelves (named novel collections, many-to-many).
+  CREATE TABLE IF NOT EXISTS bookmarks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    novel_id TEXT NOT NULL,
+    chapter_id TEXT NOT NULL,
+    scroll_offset REAL NOT NULL,
+    percent REAL NOT NULL,
+    note TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_bookmarks_novel ON bookmarks(novel_id, created_at DESC);
+
+  CREATE TABLE IF NOT EXISTS shelves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS shelf_items (
+    shelf_id INTEGER NOT NULL,
+    novel_id TEXT NOT NULL,
+    added_at INTEGER NOT NULL,
+    PRIMARY KEY (shelf_id, novel_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_shelf_items_novel ON shelf_items(novel_id);
   `,
 ];

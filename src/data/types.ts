@@ -79,3 +79,21 @@ export interface PronunciationRule {
 export type NewPronunciationRule = Omit<PronunciationRule, "id" | "updatedAt"> & {
   id?: number;
 };
+
+export interface Bookmark {
+  id: number;
+  novelId: string;
+  chapterId: string;
+  scrollOffset: number;
+  percent: number;
+  note: string | null;
+  createdAt: number;
+}
+
+export type NewBookmark = Omit<Bookmark, "id" | "createdAt">;
+
+export interface Shelf {
+  id: number;
+  name: string;
+  createdAt: number;
+}

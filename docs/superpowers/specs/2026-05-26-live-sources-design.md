@@ -34,7 +34,7 @@ Royal Road specifically: free-to-read content, but its ToS prohibits automated a
         ▼                                 │
 ┌─ App: source layer ───────────────────────────────────────┐
 │  sourceRegistry  ← fetch configs, cache, bundled fallback  │
-│  adapterEngine   ← interprets a config + cheerio:          │
+│  adapterEngine   ← interprets a config + node-html-parser: │
 │                    search() · details() · chapterList()    │
 │                    · chapterBody()   (rate-limited fetch)  │
 │  liveSource      ← implements the SAME interface mockSource │
@@ -51,7 +51,7 @@ Royal Road specifically: free-to-read content, but its ToS prohibits automated a
 
 ## 4. Adapter config schema (the contract)
 
-A declarative config interpreted by a generic engine — **no remote code execution**. A small selector mini-language (`selector` plus optional `@attr` to read an attribute) keeps it safe and debuggable.
+A declarative config interpreted by a generic engine (node-html-parser) — **no remote code execution**. A small selector mini-language (`selector` plus optional `@attr` to read an attribute) keeps it safe and debuggable.
 
 ```jsonc
 {
@@ -121,7 +121,7 @@ ALTER TABLE chapters ADD COLUMN source_url TEXT;   -- per-chapter live fetch URL
 |---|---|
 | `src/sources/types.ts` | `SourceConfig`, `SourceSelector` types (the schema above) |
 | `src/sources/registry.ts` | fetch configs from backend → cache in `sources` table; bundled fallback at `src/sources/bundled/*.json`; version-aware refresh |
-| `src/sources/engine.ts` | interpreter: `runSelector(html, sel)` via cheerio; builds `search/details/chapterList/chapterBody` from a config |
+| `src/sources/engine.ts` | interpreter: `parseList/parseDetails/parseChapterBody` + `fetchHtml` via node-html-parser; builds results from a config |
 | `src/sources/rateLimiter.ts` | per-source min-gap queue (honors `rateLimitMs`); single in-flight chain per host |
 | `src/sources/liveSource.ts` | implements the `mockSource` interface using engine + a resolved config |
 | `src/stores/sourceStore.ts` | enabled sources, active-browse-source, registry-refresh state |
@@ -129,7 +129,7 @@ ALTER TABLE chapters ADD COLUMN source_url TEXT;   -- per-chapter live fetch URL
 
 `src/services/catalogue.ts` gains a resolver: pick `liveSource` when the target novel/source is live, else `mockSource`. Call sites unchanged.
 
-**Parsing dep:** `cheerio` (pure JS, Hermes-safe — used by LNReader). Install via the `expo install` path; pin whatever version `expo-doctor` accepts.
+**Parsing dep:** `node-html-parser` (pure JS, Hermes-safe). Originally specced as `cheerio`, but cheerio 1.x statically imports `undici` (via its `fromURL` export), whose `node:` built-ins break the Metro/Hermes bundle. node-html-parser provides the same `querySelector`/`getAttribute`/`innerHTML` surface the selector mini-language needs, bundles clean (verified by the S2 iOS export), and is validated offline by `scripts/validate-source-engine.ts`.
 
 ## 7. App UI + navigation
 
@@ -210,6 +210,6 @@ Auth · cloud / per-user sync · push notifications · bookmarks · shelves · a
 ## 13. Risks
 
 - **Brittle selectors:** Royal Road HTML changes break the config. Mitigated by registry-served configs (fix without app release) + `/sources/test` to verify before publishing.
-- **Hermes/cheerio edge cases:** validate cheerio under Hermes early (S2 fixture test) before depending on it.
+- **Hermes parser edge cases:** resolved at S2 — cheerio dropped for node-html-parser (cheerio's `undici` import breaks the Metro bundle). node-html-parser validated offline + bundles clean in the iOS export.
 - **Rate-limit / blocking:** respectful defaults reduce but don't eliminate the chance a source blocks requests; surfaced as a clear error state, not a crash.
 - **Schema drift (TS ↔ pydantic):** hand-synced; README flags they move together. Low volume this phase.

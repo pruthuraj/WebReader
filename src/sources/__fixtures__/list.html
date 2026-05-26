@@ -1,0 +1,20 @@
+<!-- Synthetic list-page fixture. Mirrors a generic novel-site result list
+     structure for engine validation. No scraped content. -->
+<html>
+  <body>
+    <div class="fiction-list">
+      <div class="fiction-list-item">
+        <figure><img src="/covers/1.jpg" /></figure>
+        <h2 class="fiction-title"><a href="/fiction/101/alpha">Alpha Saga</a></h2>
+      </div>
+      <div class="fiction-list-item">
+        <figure><img src="https://cdn.example.com/covers/2.jpg" /></figure>
+        <h2 class="fiction-title"><a href="/fiction/102/beta">Beta Chronicle</a></h2>
+      </div>
+      <div class="fiction-list-item">
+        <!-- malformed row: no link, must be skipped -->
+        <h2 class="fiction-title">Ghost Entry</h2>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-export type ReaderThemeName = "light" | "dark" | "sepia";
+export type ReaderThemeName = "light" | "dark" | "sepia" | "oled";
 
 export interface ReaderPalette {
   bg: string;
@@ -26,10 +26,17 @@ export const readerPalettes: Record<ReaderThemeName, ReaderPalette> = {
     muted: "#785F46",
     accent: "#B46428",
   },
+  oled: {
+    bg: "#000000",
+    fg: "#D8DCE4",
+    muted: "#5A6378",
+    accent: "#A5B4FC",
+  },
 };
 
 export const readerThemeClass: Record<ReaderThemeName, string> = {
   light: "",
   dark: "theme-dark",
   sepia: "theme-sepia",
+  oled: "theme-oled",
 };

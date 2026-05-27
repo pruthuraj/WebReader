@@ -2,16 +2,18 @@ import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { AppHeader } from "@/components/ui/headers";
 import { ContinueReadingRow } from "@/components/home/ContinueReadingRow";
 import { DownloadedNovelsRow } from "@/components/home/DownloadedNovelsRow";
-import { HomeHeader } from "@/components/home/HomeHeader";
 import { PopularNovelsRow } from "@/components/home/PopularNovelsRow";
 import { RecentlyOpenedRow } from "@/components/home/RecentlyOpenedRow";
 import { useHomeRows } from "@/hooks/useHomeRows";
 import { useLibraryStore } from "@/stores/libraryStore";
+import { useAppPalette } from "@/theme/useAppPalette";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const palette = useAppPalette();
   const rows = useHomeRows();
   const shelves = useLibraryStore((s) => s.shelves);
   const refreshShelves = useLibraryStore((s) => s.refresh);
@@ -36,34 +38,55 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-50 dark:bg-slate-950"
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      className="flex-1 bg-app-bg"
+      contentContainerStyle={{ paddingBottom: 24 }}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={palette.textMuted}
+        />
+      }
     >
-      <HomeHeader />
+      <AppHeader
+        title="NovelReader"
+        subtitle="Read, listen, and collect web novels — offline first."
+        right={
+          <Pressable
+            onPress={() => router.push("/search")}
+            accessibilityRole="button"
+            accessibilityLabel="Search"
+            className="h-10 w-10 items-center justify-center active:opacity-70"
+          >
+            <Feather name="search" size={22} color={palette.text} />
+          </Pressable>
+        }
+      />
 
-      <Pressable
-        onPress={() => router.push("/shelves" as never)}
-        className="mb-6 flex-row items-center rounded-2xl border border-slate-200 bg-white p-4 active:opacity-80 dark:border-slate-800 dark:bg-slate-900"
-        accessibilityRole="button"
-        accessibilityLabel="Your shelves"
-      >
-        <View className="h-10 w-10 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950">
-          <Feather name="folder" size={18} color="#6366F1" />
-        </View>
-        <View className="ml-3 flex-1">
-          <Text className="text-sm font-black text-slate-900 dark:text-slate-50">Your shelves</Text>
-          <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-            {shelves.length} {shelves.length === 1 ? "shelf" : "shelves"}
-          </Text>
-        </View>
-        <Feather name="chevron-right" size={20} color="#94A3B8" />
-      </Pressable>
+      <View className="px-5 pt-2">
+        <Pressable
+          onPress={() => router.push("/shelves" as never)}
+          className="flex-row items-center rounded-2xl border border-app-border bg-app-surface p-4 active:opacity-80"
+          accessibilityRole="button"
+          accessibilityLabel="Your shelves"
+        >
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-app-accent-dim">
+            <Feather name="folder" size={18} color={palette.accent} />
+          </View>
+          <View className="ml-3 flex-1">
+            <Text className="text-sm font-bold text-app-text">Your shelves</Text>
+            <Text className="mt-0.5 text-xs text-app-text-muted">
+              {shelves.length} {shelves.length === 1 ? "shelf" : "shelves"}
+            </Text>
+          </View>
+          <Feather name="chevron-right" size={20} color={palette.textMuted} />
+        </Pressable>
+      </View>
 
       {rows.loading ? (
-        <View className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
-          <ActivityIndicator />
-          <Text className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+        <View className="mx-5 mt-4 rounded-2xl border border-app-border bg-app-surface p-5">
+          <ActivityIndicator color={palette.accent} />
+          <Text className="mt-3 text-center text-xs text-app-text-muted">
             Loading your local library
           </Text>
         </View>
@@ -76,4 +99,3 @@ export default function HomeScreen() {
     </ScrollView>
   );
 }
-

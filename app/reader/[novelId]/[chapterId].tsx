@@ -10,6 +10,8 @@ import {
   View,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
 import * as Brightness from "expo-brightness";
 import * as KeepAwake from "expo-keep-awake";
@@ -43,6 +45,7 @@ function firstParam(value: string | string[] | undefined) {
 
 export default function ReaderScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ novelId: string; chapterId: string; offset?: string }>();
   const novelId = firstParam(params.novelId) ?? "";
   const chapterId = firstParam(params.chapterId) ?? "";
@@ -232,6 +235,12 @@ export default function ReaderScreen() {
   };
 
   const palette = readerPalettes[appearance.theme];
+  const ttsPlaying = ttsStatus === "playing";
+  const focus = appearance.focus;
+  const blurAllActive =
+    focus.enabled &&
+    focus.mode === "blurAll" &&
+    ((ttsPlaying && focus.duringTTS) || (!ttsPlaying && focus.duringManual));
 
   if (loading) {
     return (
@@ -256,14 +265,40 @@ export default function ReaderScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: palette.bg }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View
+        style={{ paddingTop: insets.top + 4 }}
+        className="flex-row items-center justify-between px-1 pb-1"
+      >
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+          className="h-10 w-10 items-center justify-center active:opacity-70"
+        >
+          <Feather name="chevron-left" size={24} color={palette.fg} />
+        </Pressable>
+        <Text className="text-sm font-semibold" style={{ color: palette.fg }}>
+          Chapter {chapter.idx} of {allChapters.length}
+        </Text>
+        <Pressable
+          onPress={() => setOptionsOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Reader options"
+          className="h-10 w-10 items-center justify-center active:opacity-70"
+        >
+          <Feather name="more-vertical" size={22} color={palette.fg} />
+        </Pressable>
+      </View>
       <ReaderProgress percent={lastSavedPercent} />
+      <View className="flex-1">
       <ScrollView
         ref={scrollRef}
         className="flex-1"
         style={{ backgroundColor: palette.bg }}
         contentContainerStyle={{
           paddingHorizontal: appearance.margin,
-          paddingTop: 42,
+          paddingTop: 8,
           paddingBottom: 144,
         }}
         scrollEventThrottle={80}
@@ -278,6 +313,7 @@ export default function ReaderScreen() {
           chapterTitle={chapter.title}
           idx={chapter.idx}
           total={allChapters.length}
+          fontStyle={appearance.fontStyle}
         />
         <Animated.View
           key={chapter.chapterId}
@@ -289,6 +325,7 @@ export default function ReaderScreen() {
             appearance={appearance}
             highlightedSentenceIdx={highlightedSentenceIdx}
             highlightMode={highlightMode}
+            ttsPlaying={ttsPlaying}
             onSentenceDoubleTap={(sentenceIndex) =>
               void playFromSentence(chapter.body ?? "", sentenceIndex, {
                 novelId,
@@ -304,6 +341,15 @@ export default function ReaderScreen() {
           onNext={() => openChapter(neighbors.next)}
         />
       </ScrollView>
+        {blurAllActive ? (
+          <BlurView
+            intensity={Math.round((focus.blur / 15) * 100)}
+            tint={appearance.theme === "light" || appearance.theme === "sepia" ? "light" : "dark"}
+            pointerEvents="none"
+            style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}
+          />
+        ) : null}
+      </View>
 
       <ReaderPlaybackBar
         text={chapter.body}
@@ -330,26 +376,6 @@ export default function ReaderScreen() {
         onOpenAppearance={() => setReaderSheetOpen(true)}
         onOpenTtsSettings={() => setTtsSheetOpen(true)}
         onAddBookmark={() => void addBookmark()}
-      />
-
-      <Stack.Screen
-        options={{
-          headerTitle: () => (
-            <Text className="text-base font-black text-slate-50">
-              Chapter {chapter.idx} of {allChapters.length}
-            </Text>
-          ),
-          headerRight: () => (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Reader options"
-              onPress={() => setOptionsOpen(true)}
-              className="h-9 w-9 items-center justify-center rounded-full bg-white/10 active:opacity-75 mr-1"
-            >
-              <Feather name="more-vertical" size={18} color="#F8FAFC" />
-            </Pressable>
-          ),
-        }}
       />
     </View>
   );

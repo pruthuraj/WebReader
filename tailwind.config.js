@@ -30,6 +30,25 @@ module.exports = {
           muted: "rgb(var(--reader-muted) / <alpha-value>)",
           accent: "rgb(var(--reader-accent) / <alpha-value>)",
         },
+        // App-chrome themes (Phase 2d) — CSS vars set at runtime by ThemeProvider
+        // via vars(). Values are full color strings (hex/rgba), so no /<alpha>.
+        app: {
+          bg: "var(--app-bg)",
+          surface: "var(--app-surface)",
+          "surface-2": "var(--app-surface-2)",
+          "surface-3": "var(--app-surface-3)",
+          border: "var(--app-border)",
+          "border-strong": "var(--app-border-strong)",
+          text: "var(--app-text)",
+          "text-dim": "var(--app-text-dim)",
+          "text-muted": "var(--app-text-muted)",
+          accent: "var(--app-accent)",
+          "accent-dim": "var(--app-accent-dim)",
+          "on-accent": "var(--app-on-accent)",
+          success: "var(--app-success)",
+          warn: "var(--app-warn)",
+          danger: "var(--app-danger)",
+        },
       },
       fontFamily: {
         serif: ["Georgia", "Cambria", "Times New Roman", "serif"],

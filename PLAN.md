@@ -23,7 +23,7 @@ TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/re
 
 ## Current reader UI contract
 
-- **Top header:** `‹ back` · `Chapter X of Y` · `⋮`
+- **Top header:** `‹ back` · `Chapter X of Y` · `⋮` — Phase 2d renders this as an in-content bar themed to the reader palette (navigator header hidden), not via `Stack.Screen` options.
 - **`⋮` opens `ReaderOptionsSheet`** with six rows: Contents · About · Appearance · TTS · Downloads · Reader settings.
 - **Bottom bar** — always visible, no close button:
   `‹ prev chapter` · `play / pause` · `next chapter ›` · `stop (only when status !== "idle")` · `sleep timer`
@@ -33,9 +33,10 @@ TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/re
 ## App navigation contract
 
 - `app/(tabs)/_layout.tsx` owns the bottom tabs: **Home · Search · Downloads · Settings.**
-- `app/_layout.tsx` owns the root Stack: `(tabs)` (no header) + `novel/[id]` + `reader/[novelId]/[chapterId]` + `dashboard`.
-- Tabs are visible on the four tab routes only. NovelDetails, Reader, and Dashboard render without tabs.
-- Dashboard is reachable only via Settings → "Reading insights → Open dashboard". Not a top-level tab.
+- `app/_layout.tsx` owns the root Stack: `(tabs)` + `novel/[id]` + `reader/[novelId]/[chapterId]` + `dashboard` + `app/settings/**` (appearance, focus, downloads, developer, about, tts/*) + sources/shelves/shelf/tts-pronunciation.
+- **Phase 2d:** tab and most stack headers are hidden; screens render their own in-content header (`AppHeader`/`ScreenHeader` in `src/components/ui/headers.tsx`) themed by the active app-chrome theme. The Settings tab is a 6-row list that drills into the `app/settings/**` detail routes.
+- Tabs are visible on the four tab routes only. NovelDetails, Reader, Dashboard, and settings detail pages render without tabs.
+- Dashboard is reachable via Settings → "Activity / Dashboard".
 
 ## What's next
 
@@ -44,6 +45,8 @@ TTS Settings **Priorities 1–4** all shipped (P4 partial — Bluetooth pause/re
 **Phase 2a — Live Sources is implemented** on branch `phase-2a-live-sources` (S1–S9; [docs/PHASE_2A.md](./docs/PHASE_2A.md)). Real content fetched live from real sources (Royal Road reference) via on-device declarative adapters behind the `catalogue` facade; a FastAPI service serves adapter **configs only**. Personal-use, on-device, robots-aware. Outstanding before merge: **deploy the backend** (manual) + **on-device QA** of the live path.
 
 **Phase 2c — Bookmarks + Shelves is implemented** on branch `phase-2c-bookmarks-shelves` (stacked on 2a; schema v3→v4). App-side only. Outstanding before merge: on-device QA.
+
+**Phase 2d — UI re-skin (in progress)** — port the `ref/*.jsx` dark-navy design language into the existing RN app, reusing the current file structure + data layer. Adds selectable app-chrome themes (light / dark / dark-navy default / custom color editor), a reader font picker (Lora/Inter/Raleway/Montserrat/Libre Caslon/Libre Baskerville), Focus Blur, and the full settings tree (Appearance, Downloads, Developer, About, TTS root + 7 sub-pages). See `docs/phaseongoing3.md` "Phase 2d".
 
 Still deferred:
 - Native-prebuild slice of Group D — Bluetooth pause/resume, Android background foreground-service, iOS `UIBackgroundModes: ["audio"]` — none fit Expo Go.

@@ -45,32 +45,28 @@ export function EventStreamPreview({ limit = 20 }: EventStreamPreviewProps) {
 
   if (!events.length) {
     return (
-      <View className="rounded-2xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-        <Text className="text-xs text-slate-500 dark:text-slate-400">
-          No events recorded yet.
-        </Text>
+      <View className="rounded-2xl border border-app-border p-4">
+        <Text className="text-xs text-app-text-muted">No events recorded yet.</Text>
       </View>
     );
   }
 
   return (
-    <View className="overflow-hidden rounded-2xl bg-white dark:bg-slate-900">
+    <View className="overflow-hidden rounded-2xl border border-app-border bg-app-surface">
       {events.map((event, index) => (
         <View
           key={event.id ?? `${event.type}-${index}`}
           className={`flex-row items-start px-4 py-2.5 ${
-            index > 0 ? "border-t border-slate-100 dark:border-slate-800" : ""
+            index > 0 ? "border-t border-app-border" : ""
           }`}
         >
-          <Text className="w-24 text-[11px] font-black uppercase text-indigo-500 dark:text-indigo-300">
-            {event.type}
-          </Text>
+          <Text className="w-24 text-[11px] font-bold uppercase text-app-accent">{event.type}</Text>
           <View className="flex-1 pr-2">
-            <Text className="text-xs text-slate-700 dark:text-slate-200" numberOfLines={2}>
+            <Text className="text-xs text-app-text-dim" numberOfLines={2}>
               {payloadPreview(event) || "(no payload)"}
             </Text>
           </View>
-          <Text className="text-[10px] text-slate-400">{shortDate(event.createdAt)}</Text>
+          <Text className="text-[10px] text-app-text-muted">{shortDate(event.createdAt)}</Text>
         </View>
       ))}
     </View>

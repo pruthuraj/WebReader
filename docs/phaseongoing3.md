@@ -200,3 +200,45 @@ npm run lint
 npx expo-doctor
 npx expo export --platform ios --output-dir .expo-export-test
 ```
+
+---
+
+### Phase 2d · UI re-skin to the `ref/` dark-navy design **(in progress)**
+
+**Source of truth:** `ref/*.jsx` (web prototype defining the dark-navy design language) +
+the approved plan. Branch: `phase-2c-bookmarks-shelves` (or a new `phase-2d-ui-reskin`).
+
+Port the ref's visuals + screens into the existing RN app, **reusing the current file
+structure and data layer**. Logic stays; the look and the settings tree get rebuilt. This
+group is explicitly authorized by the user and so supersedes the "don't add features beyond
+the active group's doc" house rule for the items below.
+
+**Locked decisions**
+
+1. Scope = visual re-skin **+ build the ref's new screens** (Focus Blur, 7 TTS sub-pages,
+   full settings detail pages).
+2. App-chrome themes = **light / dark / dark-navy (default) / custom**. Reader keeps its own
+   theme set (light / sepia / dark + new **oled**).
+3. **Custom = full color editor** (user picks palette slots; persisted; app-wide).
+4. **Fonts = reader text only** — bundle Lora, Inter, Raleway, Montserrat, Libre Caslon,
+   Libre Baskerville (+ System); picker drives reader body/title font. App chrome font fixed.
+
+**Sub-steps (one commit each, `feat(area): 2d-S# …`)**
+
+| Step | Scope |
+|---|---|
+| **S1** | Theme foundation — `src/theme/appThemes.ts`, `global.css` `--app-*` vars, `tailwind.config.js` `app.*` tokens + font families, `settingsStore` (`appTheme`+`customPalette`), `ThemeProvider` rewrite (decouple chrome from reader theme), root-layout `useFonts`. |
+| **S2** | Shared UI kit re-skin — CoverPlaceholder, headers, Tag/Chip, StatusBadge, SettingsSection/Row, reusable Stepper/Toggle/Segmented/Select/Slider; glass-navy bottom Tabs. |
+| **S3** | Tab screens — Home, Search, Downloads, Settings (6-row list). |
+| **S4** | Stack screens — NovelDetails, Dashboard, Reader. |
+| **S5** | Reader sheets — ReaderOptionsSheet, ReaderSettingsSheet, TTSSettingsSheet. |
+| **S6** | Settings detail routes — `app/settings/{appearance,downloads,developer,about}.tsx`. |
+| **S7** | TTS tree — `app/settings/tts/` root + playback / voice / pronunciation / cleaning / highlighting / queue / device. Reuse `ttsDefaults.cleaning`, `highlightMode`, `playlistStore`, `pronunciationRepo`. |
+| **S8** | Focus Blur — `ReaderAppearance.focus`; `ReaderContent` dim/highlight (per-paragraph blur is **not** native to RN — focus uses dim/highlight, `blurAll` uses an `expo-blur` overlay); Focus sub-page + Appearance entry. |
+| **S9** | Custom theme color editor in Appearance/Theme (live via `customPalette` + `vars()`). |
+
+**No schema change expected** — all new settings persist through the existing `settings.v1`
+kv blob via `settingsStore`. Bump `SCHEMA_VERSION` only if a table becomes necessary.
+
+The ref's iOS device frame / keyboard (`ref/ios-frame.jsx`) is preview-only and is **not**
+ported.

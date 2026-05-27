@@ -1,6 +1,17 @@
 import { create } from "zustand";
 import { kvRepo } from "@/db/repositories/kvRepo";
-import { defaultAppearance, type ReaderAppearance } from "./readerStore";
+import {
+  defaultAppTheme,
+  defaultCustomPalette,
+  type AppPalette,
+  type AppThemeName,
+} from "@/theme/appThemes";
+import {
+  defaultAppearance,
+  defaultFocus,
+  normalizeFontStyle,
+  type ReaderAppearance,
+} from "./readerStore";
 
 export type HighlightMode = "sentence" | "paragraph" | "underlineParagraph" | "comma";
 
@@ -63,6 +74,9 @@ export interface AppSettings {
   // `chapter_read` event. Was hardcoded to 0.8.
   chapterReadThreshold: number;
   devMode: boolean;
+  // App-chrome theme (Phase 2d). Distinct from readerDefaults.theme.
+  appTheme: AppThemeName;
+  customPalette: AppPalette;
 }
 
 export const defaultSettings: AppSettings = {
@@ -72,6 +86,8 @@ export const defaultSettings: AppSettings = {
   autoRetryFailed: true,
   chapterReadThreshold: 0.8,
   devMode: __DEV__,
+  appTheme: defaultAppTheme,
+  customPalette: { ...defaultCustomPalette },
 };
 
 const KV_KEY = "settings.v1";
@@ -82,6 +98,15 @@ function mergeTtsDefaults(stored: Partial<TtsDefaults> | undefined): TtsDefaults
     ...defaultTtsDefaults,
     ...stored,
     cleaning: { ...defaultTtsCleaning, ...(stored.cleaning ?? {}) },
+  };
+}
+
+function mergeReaderDefaults(stored: Partial<ReaderAppearance> | undefined): ReaderAppearance {
+  const merged = { ...defaultAppearance, ...(stored ?? {}) };
+  return {
+    ...merged,
+    fontStyle: normalizeFontStyle(merged.fontStyle),
+    focus: { ...defaultFocus, ...(stored?.focus ?? {}) },
   };
 }
 
@@ -104,8 +129,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         settings: {
           ...defaultSettings,
           ...stored,
-          readerDefaults: { ...defaultAppearance, ...(stored.readerDefaults ?? {}) },
+          readerDefaults: mergeReaderDefaults(stored.readerDefaults),
           ttsDefaults: mergeTtsDefaults(stored.ttsDefaults),
+          customPalette: { ...defaultCustomPalette, ...(stored.customPalette ?? {}) },
         },
         hydrated: true,
       });

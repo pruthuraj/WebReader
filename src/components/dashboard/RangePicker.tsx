@@ -8,14 +8,14 @@ interface RangePickerProps {
 
 const OPTIONS: { value: Range; label: string }[] = [
   { value: "today", label: "Today" },
-  { value: "7d", label: "7d" },
-  { value: "30d", label: "30d" },
-  { value: "all", label: "All" },
+  { value: "7d", label: "7 Days" },
+  { value: "30d", label: "30 Days" },
+  { value: "all", label: "All Time" },
 ];
 
 export function RangePicker({ value, onChange }: RangePickerProps) {
   return (
-    <View className="flex-row rounded-full bg-slate-200 p-1 dark:bg-slate-800">
+    <View className="flex-row" style={{ gap: 8 }}>
       {OPTIONS.map((option) => {
         const selected = option.value === value;
         return (
@@ -24,15 +24,13 @@ export function RangePicker({ value, onChange }: RangePickerProps) {
             onPress={() => onChange(option.value)}
             accessibilityRole="button"
             accessibilityState={{ selected }}
-            className={`flex-1 items-center rounded-full px-3 py-2 ${
-              selected ? "bg-white dark:bg-slate-950" : ""
-            } active:opacity-75`}
+            className={`rounded-full px-4 py-2 active:opacity-75 ${
+              selected ? "bg-app-accent" : "bg-app-surface-2"
+            }`}
           >
             <Text
-              className={`text-xs font-black ${
-                selected
-                  ? "text-slate-950 dark:text-slate-50"
-                  : "text-slate-500 dark:text-slate-400"
+              className={`text-xs font-semibold ${
+                selected ? "text-app-on-accent" : "text-app-text-dim"
               }`}
             >
               {option.label}

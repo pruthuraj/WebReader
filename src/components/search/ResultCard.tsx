@@ -14,32 +14,34 @@ export function ResultCard({ novel, onPress }: ResultCardProps) {
     <Animated.View entering={FadeInDown.duration(220)}>
       <Pressable
         onPress={onPress}
-        className="mb-3 rounded-2xl border border-slate-200 bg-white p-3 active:opacity-80 dark:border-slate-800 dark:bg-slate-900"
+        className="flex-row border-b border-app-border px-5 py-3 active:opacity-80"
         accessibilityRole="button"
         accessibilityLabel={`Open ${novel.title}`}
+        style={{ gap: 12 }}
       >
-        <View className="flex-row">
-          <CoverPlaceholder title={novel.title} coverHint={novel.coverHint} compact />
-          <View className="ml-3 flex-1">
-            <Text className="text-base font-black text-slate-950 dark:text-slate-50" numberOfLines={2}>
-              {novel.title}
+        <CoverPlaceholder
+          title={novel.title}
+          coverHint={novel.coverHint}
+          width={56}
+          height={80}
+          radius={6}
+        />
+        <View className="min-w-0 flex-1">
+          <Text className="text-[15px] font-semibold leading-5 text-app-text" numberOfLines={2}>
+            {novel.title}
+          </Text>
+          <Text className="mt-0.5 text-xs text-app-text-muted" numberOfLines={1}>
+            {novel.author ?? "Unknown author"}
+          </Text>
+          {novel.source || novel.language ? (
+            <Text className="mt-1 text-[11px] text-app-text-muted" numberOfLines={1}>
+              {[novel.source, novel.language].filter(Boolean).join(" · ")}
             </Text>
-            <Text className="mt-1 text-xs text-slate-500 dark:text-slate-400" numberOfLines={1}>
-              {novel.author ?? "Unknown author"}
-            </Text>
-            <View className="mt-1 flex-row flex-wrap">
-              {novel.source ? <Tag label={novel.source} variant="source" /> : null}
-              {novel.language ? <Tag label={novel.language} variant="language" /> : null}
-              {novel.tags.slice(0, 2).map((tag) => (
-                <Tag key={tag} label={tag} />
-              ))}
-            </View>
-            <Text
-              className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300"
-              numberOfLines={3}
-            >
-              {novel.description}
-            </Text>
+          ) : null}
+          <View className="mt-1 flex-row flex-wrap">
+            {novel.tags.slice(0, 3).map((tag) => (
+              <Tag key={tag} label={tag} />
+            ))}
           </View>
         </View>
       </Pressable>

@@ -1,7 +1,9 @@
 import { Feather } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, View } from "react-native";
+import { ScreenHeader } from "@/components/ui/headers";
+import { useAppPalette } from "@/theme/useAppPalette";
 import { AddToShelfSheet } from "@/components/novel/AddToShelfSheet";
 import { ChapterListItem } from "@/components/novel/ChapterListItem";
 import { DescriptionBlock } from "@/components/novel/DescriptionBlock";
@@ -24,6 +26,7 @@ function firstParam(value: string | string[] | undefined) {
 
 export default function NovelDetailsScreen() {
   const router = useRouter();
+  const palette = useAppPalette();
   const params = useLocalSearchParams<{ id: string }>();
   const id = firstParam(params.id);
   const recordNovelOpen = useAnalyticsStore((s) => s.recordNovelOpen);
@@ -109,111 +112,110 @@ export default function NovelDetailsScreen() {
 
   if (loading) {
     return (
-      <View className="flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <ActivityIndicator />
-        <Text className="mt-3 text-xs text-slate-500 dark:text-slate-400">Loading novel</Text>
+      <View className="flex-1 items-center justify-center bg-app-bg">
+        <Stack.Screen options={{ headerShown: false }} />
+        <ActivityIndicator color={palette.accent} />
+        <Text className="mt-3 text-xs text-app-text-muted">Loading novel</Text>
       </View>
     );
   }
 
   if (!novel || !id) {
     return (
-      <View className="flex-1 bg-slate-50 p-4 dark:bg-slate-950">
-        <EmptyState
-          icon="alert-circle"
-          title="Novel not found"
-          subtitle="The catalogue could not resolve this novel."
-        />
+      <View className="flex-1 bg-app-bg">
+        <Stack.Screen options={{ headerShown: false }} />
+        <ScreenHeader />
+        <View className="p-4">
+          <EmptyState
+            icon="alert-circle"
+            title="Novel not found"
+            subtitle="The catalogue could not resolve this novel."
+          />
+        </View>
       </View>
     );
   }
 
   return (
-    <>
-    <FlatList
-      className="flex-1 bg-slate-50 dark:bg-slate-950"
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      data={chapters}
-      keyExtractor={(item) => item.chapterId}
-      ListHeaderComponent={
-        <>
-          <NovelHeader
-            novel={novel}
-            onRead={openContinueOrFirst}
-            onDownloadAll={enqueueAll}
-            onAddToShelf={() => setShelfOpen(true)}
-          />
-          <DescriptionBlock text={novel.description} />
-          {lastProgress ? (
-            <Pressable
-              onPress={() => openChapter(lastProgress.chapterId)}
-              className="mb-5 rounded-2xl border border-indigo-200 bg-indigo-50 p-4 active:opacity-80 dark:border-indigo-900 dark:bg-indigo-950"
-            >
-              <Text className="text-xs font-black uppercase text-indigo-500 dark:text-indigo-300">
-                Continue
-              </Text>
-              <Text className="mt-1 text-sm font-bold text-indigo-900 dark:text-indigo-100">
-                Chapter saved at {percentLabel(lastProgress.percent)}
-              </Text>
-            </Pressable>
-          ) : null}
-          {bookmarks.length ? (
-            <View className="mb-5">
-              <Text className="mb-2 text-lg font-black text-slate-900 dark:text-slate-50">
-                Bookmarks
-              </Text>
-              {bookmarks.map((b) => (
-                <View
-                  key={b.id}
-                  className="mb-2 flex-row items-center rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900"
-                >
-                  <Pressable className="flex-1 active:opacity-70" onPress={() => openBookmark(b)}>
-                    <Text
-                      className="text-sm font-bold text-slate-900 dark:text-slate-100"
-                      numberOfLines={1}
-                    >
-                      {chapterTitleById.get(b.chapterId) ?? "Chapter"}
-                    </Text>
-                    <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      Saved at {percentLabel(b.percent)}
-                      {b.note ? ` · ${b.note}` : ""}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => void removeBookmark(b.id)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Remove bookmark"
-                    className="ml-3 h-9 w-9 items-center justify-center rounded-full bg-slate-100 active:opacity-70 dark:bg-slate-800"
+    <View className="flex-1 bg-app-bg">
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScreenHeader />
+      <FlatList
+        contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 }}
+        data={chapters}
+        keyExtractor={(item) => item.chapterId}
+        ListHeaderComponent={
+          <>
+            <NovelHeader
+              novel={novel}
+              onRead={openContinueOrFirst}
+              onDownloadAll={enqueueAll}
+              onAddToShelf={() => setShelfOpen(true)}
+            />
+            <DescriptionBlock text={novel.description} />
+            {lastProgress ? (
+              <Pressable
+                onPress={() => openChapter(lastProgress.chapterId)}
+                className="mb-5 rounded-2xl border border-app-border bg-app-accent-dim p-4 active:opacity-80"
+              >
+                <Text className="text-xs font-bold uppercase tracking-wide text-app-accent">
+                  Continue
+                </Text>
+                <Text className="mt-1 text-sm font-semibold text-app-text">
+                  Chapter saved at {percentLabel(lastProgress.percent)}
+                </Text>
+              </Pressable>
+            ) : null}
+            {bookmarks.length ? (
+              <View className="mb-5">
+                <Text className="mb-2 text-[17px] font-bold text-app-text">Bookmarks</Text>
+                {bookmarks.map((b) => (
+                  <View
+                    key={b.id}
+                    className="mb-2 flex-row items-center rounded-2xl border border-app-border bg-app-surface p-3"
                   >
-                    <Feather name="trash-2" size={16} color="#EF4444" />
-                  </Pressable>
-                </View>
-              ))}
-            </View>
-          ) : null}
-          <Text className="mb-3 text-lg font-black text-slate-900 dark:text-slate-50">
-            Chapters
-          </Text>
-        </>
-      }
-      renderItem={({ item }) => (
-        <ChapterListItem
-          chapter={item}
-          isInProgress={inProgressChapterIds.has(item.chapterId)}
-          isQueued={Boolean(queue[key(id, item.chapterId)])}
-          onPress={() => openChapter(item.chapterId)}
-          onQueue={() => enqueueOne(item.chapterId)}
-        />
-      )}
-      ListEmptyComponent={
-        <EmptyState
-          icon="list"
-          title="No chapters"
-          subtitle="The local catalogue has no chapters for this novel."
-        />
-      }
-    />
+                    <Pressable className="flex-1 active:opacity-70" onPress={() => openBookmark(b)}>
+                      <Text className="text-sm font-semibold text-app-text" numberOfLines={1}>
+                        {chapterTitleById.get(b.chapterId) ?? "Chapter"}
+                      </Text>
+                      <Text className="mt-0.5 text-xs text-app-text-muted">
+                        Saved at {percentLabel(b.percent)}
+                        {b.note ? ` · ${b.note}` : ""}
+                      </Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => void removeBookmark(b.id)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Remove bookmark"
+                      className="ml-3 h-9 w-9 items-center justify-center rounded-full bg-app-surface-2 active:opacity-70"
+                    >
+                      <Feather name="trash-2" size={16} color={palette.danger} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <Text className="mb-1 text-[17px] font-bold text-app-text">Chapters</Text>
+          </>
+        }
+        renderItem={({ item }) => (
+          <ChapterListItem
+            chapter={item}
+            isInProgress={inProgressChapterIds.has(item.chapterId)}
+            isQueued={Boolean(queue[key(id, item.chapterId)])}
+            onPress={() => openChapter(item.chapterId)}
+            onQueue={() => enqueueOne(item.chapterId)}
+          />
+        )}
+        ListEmptyComponent={
+          <EmptyState
+            icon="list"
+            title="No chapters"
+            subtitle="The local catalogue has no chapters for this novel."
+          />
+        }
+      />
       <AddToShelfSheet visible={shelfOpen} novelId={id} onClose={() => setShelfOpen(false)} />
-    </>
+    </View>
   );
 }

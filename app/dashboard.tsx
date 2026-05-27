@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Stack } from "expo-router";
+import { ScreenHeader } from "@/components/ui/headers";
 import { DashboardEmptyState } from "@/components/dashboard/DashboardEmptyState";
 import { DropOffChart } from "@/components/dashboard/DropOffChart";
 import { EventStreamPreview } from "@/components/dashboard/EventStreamPreview";
@@ -13,19 +15,19 @@ import {
   type TopNovelEntry,
 } from "@/services/analytics";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { useAppPalette } from "@/theme/useAppPalette";
 
 function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View className="mb-2 mt-6">
-      <Text className="text-base font-black text-slate-950 dark:text-slate-50">{title}</Text>
-      {subtitle ? (
-        <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{subtitle}</Text>
-      ) : null}
+      <Text className="text-base font-bold text-app-text">{title}</Text>
+      {subtitle ? <Text className="mt-0.5 text-xs text-app-text-muted">{subtitle}</Text> : null}
     </View>
   );
 }
 
 export default function DashboardScreen() {
+  const palette = useAppPalette();
   const devMode = useSettingsStore((s) => s.settings.devMode);
   const [range, setRange] = useState<Range>("all");
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -65,62 +67,52 @@ export default function DashboardScreen() {
     : 0;
 
   return (
-    <ScrollView
-      className="flex-1 bg-slate-50 dark:bg-slate-950"
-      contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      <Text className="text-3xl font-black text-slate-950 dark:text-slate-50">Dashboard</Text>
-      <Text className="mb-4 mt-1 text-xs text-slate-500 dark:text-slate-400">
-        On-device metrics. Nothing leaves your phone.
-      </Text>
+    <View className="flex-1 bg-app-bg">
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScreenHeader title="Dashboard" />
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 32 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.textMuted} />
+        }
+      >
+        <RangePicker value={range} onChange={setRange} />
 
-      <RangePicker value={range} onChange={setRange} />
-
-      {loading && !summary ? (
-        <View className="mt-8 items-center">
-          <ActivityIndicator />
-        </View>
-      ) : isEmpty ? (
-        <DashboardEmptyState />
-      ) : summary ? (
-        <>
-          <SectionHeader title="Activity" subtitle="Counts in selected range." />
-          <View className="flex-row flex-wrap gap-3">
-            <MetricCard label="Searches" value={summary.searches} />
-            <MetricCard label="Novel opens" value={summary.novelOpens} />
-            <MetricCard label="Chapters read" value={summary.chaptersRead} />
-            <MetricCard
-              label="TTS minutes"
-              value={summary.ttsMinutes}
-              suffix="min"
-              emphasis="muted"
-            />
-            <MetricCard
-              label="Avg session"
-              value={avgSessionMinutes}
-              suffix="min"
-              emphasis="muted"
-            />
+        {loading && !summary ? (
+          <View className="mt-8 items-center">
+            <ActivityIndicator color={palette.accent} />
           </View>
+        ) : isEmpty ? (
+          <DashboardEmptyState />
+        ) : summary ? (
+          <>
+            <SectionHeader title="Activity" subtitle="Counts in selected range." />
+            <View className="flex-row flex-wrap gap-3">
+              <MetricCard label="Searches" value={summary.searches} />
+              <MetricCard label="Novel opens" value={summary.novelOpens} />
+              <MetricCard label="Chapters read" value={summary.chaptersRead} />
+              <MetricCard label="TTS minutes" value={summary.ttsMinutes} suffix="min" emphasis="muted" />
+              <MetricCard label="Avg session" value={avgSessionMinutes} suffix="min" emphasis="muted" />
+            </View>
 
-          <SectionHeader title="Top novels" subtitle="Most opened in this range." />
-          <TopNovelsList items={topNovels} />
+            <SectionHeader title="Top novels" subtitle="Most opened in this range." />
+            <TopNovelsList items={topNovels} />
 
-          <SectionHeader
-            title="Drop-off"
-            subtitle="Chapter index vs opens for your most-opened novel."
-          />
-          <DropOffChart candidates={topNovels} />
+            <SectionHeader
+              title="Drop-off"
+              subtitle="Chapter index vs opens for your most-opened novel."
+            />
+            <DropOffChart candidates={topNovels} />
 
-          {devMode ? (
-            <>
-              <SectionHeader title="Recent events" subtitle="Dev-mode stream of the last 20." />
-              <EventStreamPreview />
-            </>
-          ) : null}
-        </>
-      ) : null}
-    </ScrollView>
+            {devMode ? (
+              <>
+                <SectionHeader title="Recent events" subtitle="Dev-mode stream of the last 20." />
+                <EventStreamPreview />
+              </>
+            ) : null}
+          </>
+        ) : null}
+      </ScrollView>
+    </View>
   );
 }

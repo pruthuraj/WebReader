@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native";
-import type { ChapterMeta } from "@/data/types";
-import { StatusBadge } from "@/components/shared/StatusBadge";
 import { Feather } from "@expo/vector-icons";
+import type { ChapterMeta } from "@/data/types";
+import { useAppPalette } from "@/theme/useAppPalette";
 
 interface ChapterListItemProps {
   chapter: ChapterMeta;
@@ -18,42 +18,44 @@ export function ChapterListItem({
   onPress,
   onQueue,
 }: ChapterListItemProps) {
-  const status = chapter.downloadedAt
-    ? { status: "downloaded" as const, label: "downloaded" }
-    : isInProgress
-      ? { status: "in-progress" as const, label: "in progress" }
-      : isQueued
-        ? { status: "queued" as const, label: "queued" }
-        : { status: "available" as const, label: "available" };
+  const palette = useAppPalette();
 
   return (
     <Pressable
       onPress={onPress}
-      className="mb-2 rounded-2xl border border-slate-200 bg-white p-4 active:opacity-80 dark:border-slate-800 dark:bg-slate-900"
+      className="flex-row items-center border-b border-app-border px-1 py-3.5 active:opacity-80"
+      style={{ gap: 12, backgroundColor: isInProgress ? palette.accentDim : "transparent" }}
     >
-      <View className="flex-row items-center justify-between">
-        <View className="mr-3 flex-1">
-          <Text className="text-xs font-black uppercase text-slate-400">
-            Chapter {chapter.idx}
-          </Text>
-          <Text className="mt-1 text-base font-bold text-slate-900 dark:text-slate-50">
-            {chapter.title}
-          </Text>
+      <Text
+        className="text-[13px] font-semibold text-app-text-muted"
+        style={{ width: 34 }}
+      >
+        {chapter.idx}.
+      </Text>
+      <Text
+        className={`flex-1 text-sm ${isInProgress ? "font-semibold text-app-accent" : "text-app-text"}`}
+        numberOfLines={2}
+      >
+        {chapter.title}
+      </Text>
+      {chapter.downloadedAt ? (
+        <Feather name="check-circle" size={18} color={palette.success} />
+      ) : isInProgress ? (
+        <View className="rounded-full bg-app-accent-dim px-2 py-1">
+          <Text className="text-[10px] font-bold tracking-wide text-app-accent">READING</Text>
         </View>
-        <View className="items-end">
-          <StatusBadge status={status.status} label={status.label} />
-          {onQueue && !chapter.downloadedAt ? (
-            <Pressable
-              onPress={onQueue}
-              className="mt-2 h-8 w-8 items-center justify-center rounded-full bg-slate-100 active:opacity-70 dark:bg-slate-800"
-              accessibilityRole="button"
-              accessibilityLabel={`Queue ${chapter.title}`}
-            >
-              <Feather name="download" size={14} color="#64748B" />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
+      ) : onQueue ? (
+        <Pressable
+          onPress={onQueue}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={`Queue ${chapter.title}`}
+        >
+          <Feather name="download" size={16} color={isQueued ? palette.accent : palette.textMuted} />
+        </Pressable>
+      ) : (
+        <Feather name="download" size={16} color={palette.textMuted} style={{ opacity: 0.4 }} />
+      )}
     </Pressable>
   );
 }

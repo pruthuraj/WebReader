@@ -2,6 +2,8 @@ import { Feather } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAppPalette } from "@/theme/useAppPalette";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { FiltersSheet } from "@/components/search/FiltersSheet";
 import { ResultCard } from "@/components/search/ResultCard";
@@ -29,6 +31,8 @@ function normalizeSort(value: string | undefined): SortKey {
 
 export default function SearchScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const palette = useAppPalette();
   const params = useLocalSearchParams<{
     q?: string;
     sort?: string;
@@ -201,23 +205,25 @@ export default function SearchScreen() {
   );
 
   return (
-    <View className="flex-1 bg-slate-50 p-4 dark:bg-slate-950">
-      <SearchBar
-        value={query}
-        onChangeText={(value) => {
-          setQuery(value);
-          recordSearchDebounced(value);
-        }}
-        onSubmit={submit}
-        onClear={clear}
-      />
+    <View className="flex-1 bg-app-bg" style={{ paddingTop: insets.top + 8 }}>
+      <View className="px-4">
+        <SearchBar
+          value={query}
+          onChangeText={(value) => {
+            setQuery(value);
+            recordSearchDebounced(value);
+          }}
+          onSubmit={submit}
+          onClear={clear}
+        />
+      </View>
 
       {enabledSources.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           className="mt-3 max-h-12"
-          contentContainerStyle={{ alignItems: "center" }}
+          contentContainerStyle={{ alignItems: "center", paddingHorizontal: 16 }}
         >
           {[{ id: LOCAL, name: "Local" }, ...enabledSources.map((s) => ({ id: s.id, name: s.name }))].map(
             (tab) => {
@@ -227,12 +233,12 @@ export default function SearchScreen() {
                   key={tab.id}
                   onPress={() => setActiveTab(tab.id)}
                   className={`mr-2 rounded-full px-4 py-2 ${
-                    active ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-200 dark:bg-slate-800"
+                    active ? "bg-app-accent" : "bg-app-surface-2"
                   }`}
                 >
                   <Text
-                    className={`text-xs font-black ${
-                      active ? "text-white dark:text-slate-900" : "text-slate-600 dark:text-slate-300"
+                    className={`text-xs font-bold ${
+                      active ? "text-app-on-accent" : "text-app-text-dim"
                     }`}
                   >
                     {tab.name}
@@ -245,33 +251,33 @@ export default function SearchScreen() {
       ) : null}
 
       {isLocal ? (
-        <View className="my-4 flex-row items-center justify-between">
+        <View className="flex-row items-center justify-between border-b border-app-border px-5 py-3">
           <SortControl value={sort} onChange={updateSort} />
           <Pressable
             onPress={() => setFiltersOpen(true)}
-            className="ml-3 h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900"
+            className="h-8 w-8 items-center justify-center rounded-lg bg-app-surface-2 active:opacity-70"
             accessibilityRole="button"
             accessibilityLabel="Open filters"
           >
-            <Feather name="sliders" size={17} color="#64748B" />
+            <Feather name="sliders" size={16} color={palette.textDim} />
           </Pressable>
         </View>
       ) : (
-        <Text className="my-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+        <Text className="px-5 py-4 text-xs leading-5 text-app-text-muted">
           {query.trim() ? "Live search" : "Browsing"} via this source. Results load
           over the network and cache on your device when opened.
         </Text>
       )}
 
-      <View className="mb-3 flex-row items-center justify-between">
-        <Text className="text-xs font-bold uppercase text-slate-400">
+      <View className="flex-row items-center justify-between px-5 py-2.5">
+        <Text className="text-xs font-bold uppercase tracking-wide text-app-text-muted">
           {loading ? "Searching…" : `${results.length} results`}
         </Text>
-        {loading ? <ActivityIndicator size="small" /> : null}
+        {loading ? <ActivityIndicator size="small" color={palette.accent} /> : null}
       </View>
 
       {errorMsg ? (
-        <Text className="mb-3 text-xs leading-5 text-red-500">{errorMsg}</Text>
+        <Text className="px-5 pb-2 text-xs leading-5 text-app-danger">{errorMsg}</Text>
       ) : null}
 
       <FlatList
@@ -280,19 +286,22 @@ export default function SearchScreen() {
         renderItem={({ item }) => <ResultCard novel={item} onPress={() => void openResult(item)} />}
         showsVerticalScrollIndicator={false}
         removeClippedSubviews
+        contentContainerStyle={{ paddingBottom: 16 }}
         ListEmptyComponent={
           loading ? null : (
-            <EmptyState
-              icon="search"
-              title={errorMsg ? "Source unavailable" : "No novels match"}
-              subtitle={
-                errorMsg
-                  ? "Check your connection or try another source."
-                  : isLocal
-                    ? "Try a different word or clear filters."
-                    : "Try a different search term."
-              }
-            />
+            <View className="px-5 pt-6">
+              <EmptyState
+                icon="search"
+                title={errorMsg ? "Source unavailable" : "No novels match"}
+                subtitle={
+                  errorMsg
+                    ? "Check your connection or try another source."
+                    : isLocal
+                      ? "Try a different word or clear filters."
+                      : "Try a different search term."
+                }
+              />
+            </View>
           )
         }
       />
@@ -308,12 +317,10 @@ export default function SearchScreen() {
       />
 
       {opening ? (
-        <View className="absolute inset-0 items-center justify-center bg-black/40">
-          <View className="items-center rounded-2xl bg-white px-6 py-5 dark:bg-slate-900">
-            <ActivityIndicator />
-            <Text className="mt-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-              Loading from source…
-            </Text>
+        <View className="absolute inset-0 items-center justify-center bg-black/50">
+          <View className="items-center rounded-2xl bg-app-surface px-6 py-5">
+            <ActivityIndicator color={palette.accent} />
+            <Text className="mt-3 text-xs font-bold text-app-text-dim">Loading from source…</Text>
           </View>
         </View>
       ) : null}

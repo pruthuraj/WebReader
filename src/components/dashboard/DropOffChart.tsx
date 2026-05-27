@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import Svg, { Rect, Text as SvgText } from "react-native-svg";
+import { useAppPalette } from "@/theme/useAppPalette";
 import { analytics, type TopNovelEntry, type DropOffEntry } from "@/services/analytics";
 
 interface DropOffChartProps {
@@ -19,6 +20,7 @@ const PADDING_TOP = 16;
 const PADDING_BOTTOM = 28;
 
 export function DropOffChart({ candidates }: DropOffChartProps) {
+  const palette = useAppPalette();
   const fallbackId = candidates[0]?.novel.id ?? null;
   const [selectedNovelId, setSelectedNovelId] = useState<string | null>(fallbackId);
   const [data, setData] = useState<DropOffEntry[]>([]);
@@ -55,16 +57,14 @@ export function DropOffChart({ candidates }: DropOffChartProps) {
 
   if (!candidates.length) {
     return (
-      <View className="rounded-2xl border border-dashed border-slate-300 p-4 dark:border-slate-700">
-        <Text className="text-xs text-slate-500 dark:text-slate-400">
-          Open a chapter to see drop-off here.
-        </Text>
+      <View className="rounded-2xl border border-app-border p-4">
+        <Text className="text-xs text-app-text-muted">Open a chapter to see drop-off here.</Text>
       </View>
     );
   }
 
   return (
-    <View className="overflow-hidden rounded-2xl bg-white p-4 dark:bg-slate-900">
+    <View className="overflow-hidden rounded-2xl border border-app-border bg-app-surface p-4">
       <View className="mb-3 flex-row flex-wrap">
         {candidates.map((entry) => {
           const selected = entry.novel.id === selectedNovelId;
@@ -74,15 +74,13 @@ export function DropOffChart({ candidates }: DropOffChartProps) {
               onPress={() => setSelectedNovelId(entry.novel.id)}
               accessibilityRole="button"
               accessibilityState={{ selected }}
-              className={`mr-2 mb-2 rounded-full px-3 py-1.5 ${
-                selected
-                  ? "bg-indigo-500 dark:bg-indigo-400"
-                  : "bg-slate-100 dark:bg-slate-800"
-              } active:opacity-75`}
+              className={`mb-2 mr-2 rounded-full px-3 py-1.5 active:opacity-75 ${
+                selected ? "bg-app-accent" : "bg-app-surface-2"
+              }`}
             >
               <Text
-                className={`text-[11px] font-black ${
-                  selected ? "text-white" : "text-slate-600 dark:text-slate-300"
+                className={`text-[11px] font-semibold ${
+                  selected ? "text-app-on-accent" : "text-app-text-dim"
                 }`}
                 numberOfLines={1}
               >
@@ -94,9 +92,9 @@ export function DropOffChart({ candidates }: DropOffChartProps) {
       </View>
 
       {loading ? (
-        <Text className="py-6 text-center text-xs text-slate-400">Loading chart…</Text>
+        <Text className="py-6 text-center text-xs text-app-text-muted">Loading chart…</Text>
       ) : data.length === 0 ? (
-        <Text className="py-6 text-center text-xs text-slate-400">
+        <Text className="py-6 text-center text-xs text-app-text-muted">
           No chapter opens for this novel yet.
         </Text>
       ) : (
@@ -117,6 +115,9 @@ export function DropOffChart({ candidates }: DropOffChartProps) {
                   label={`${entry.idx}`}
                   labelY={PADDING_TOP + BAR_HEIGHT + 16}
                   opens={entry.opens}
+                  barColor={entry.opens > 0 ? palette.accent : palette.surface3}
+                  labelColor={palette.textMuted}
+                  valueColor={palette.textDim}
                 />
               );
             })}
@@ -124,7 +125,7 @@ export function DropOffChart({ candidates }: DropOffChartProps) {
         </ScrollView>
       )}
 
-      <Text className="mt-2 text-[10px] text-slate-400">
+      <Text className="mt-2 text-[10px] text-app-text-muted">
         Bars show opens per chapter index. Tall first bar + tapering = healthy drop-off.
       </Text>
     </View>
@@ -139,6 +140,9 @@ function SvgGroupedBar({
   label,
   labelY,
   opens,
+  barColor,
+  labelColor,
+  valueColor,
 }: {
   x: number;
   y: number;
@@ -147,24 +151,14 @@ function SvgGroupedBar({
   label: string;
   labelY: number;
   opens: number;
+  barColor: string;
+  labelColor: string;
+  valueColor: string;
 }) {
   return (
     <>
-      <Rect
-        x={x}
-        y={y}
-        width={width}
-        height={height}
-        rx={4}
-        fill={opens > 0 ? "#6366F1" : "#CBD5E1"}
-      />
-      <SvgText
-        x={x + width / 2}
-        y={labelY}
-        fontSize={10}
-        fill="#94A3B8"
-        textAnchor="middle"
-      >
+      <Rect x={x} y={y} width={width} height={height} rx={4} fill={barColor} />
+      <SvgText x={x + width / 2} y={labelY} fontSize={10} fill={labelColor} textAnchor="middle">
         {label}
       </SvgText>
       {opens > 0 ? (
@@ -173,7 +167,7 @@ function SvgGroupedBar({
           y={y - 4}
           fontSize={9}
           fontWeight="bold"
-          fill="#475569"
+          fill={valueColor}
           textAnchor="middle"
         >
           {opens}

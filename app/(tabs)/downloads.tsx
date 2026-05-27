@@ -1,7 +1,8 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { AppHeader, SectionHeader } from "@/components/ui/headers";
 import { DownloadRow } from "@/components/downloads/DownloadRow";
 import { QueueSummary } from "@/components/downloads/QueueSummary";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -10,6 +11,7 @@ import { chapterRepo } from "@/db/repositories/chapterRepo";
 import { novelRepo } from "@/db/repositories/novelRepo";
 import { downloader } from "@/services/downloader";
 import { useDownloadStore } from "@/stores/downloadStore";
+import { useAppPalette } from "@/theme/useAppPalette";
 import { key } from "@/utils/id";
 
 interface RowTitle {
@@ -18,14 +20,36 @@ interface RowTitle {
 }
 
 const sectionOrder: DownloadStatus[] = ["downloading", "queued", "failed", "done"];
+const sectionLabels: Record<DownloadStatus, string> = {
+  downloading: "Downloading",
+  queued: "Queued",
+  failed: "Failed",
+  done: "Downloaded",
+};
+
+type FilterTab = "all" | "done" | "queued" | "failed";
+const filterTabs: { id: FilterTab; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "done", label: "Downloaded" },
+  { id: "queued", label: "Queued" },
+  { id: "failed", label: "Failed" },
+];
+
+function inFilter(status: DownloadStatus, tab: FilterTab): boolean {
+  if (tab === "all") return true;
+  if (tab === "queued") return status === "queued" || status === "downloading";
+  return status === tab;
+}
 
 export default function DownloadsScreen() {
   const router = useRouter();
+  const palette = useAppPalette();
   const queue = useDownloadStore((s) => s.queue);
   const refresh = useDownloadStore((s) => s.refresh);
   const retry = useDownloadStore((s) => s.retry);
   const remove = useDownloadStore((s) => s.remove);
   const [refreshing, setRefreshing] = useState(false);
+  const [tab, setTab] = useState<FilterTab>("all");
   const [titles, setTitles] = useState<Record<string, RowTitle>>({});
 
   const items = useMemo(() => Object.values(queue), [queue]);
@@ -79,59 +103,90 @@ export default function DownloadsScreen() {
     downloader.poke();
   };
 
-  const grouped = sectionOrder.map((status) => ({
-    status,
-    data: items.filter((item) => item.status === status),
-  }));
+  const grouped = sectionOrder
+    .filter((status) => inFilter(status, tab))
+    .map((status) => ({ status, data: items.filter((item) => item.status === status) }));
 
   return (
     <ScrollView
-      className="flex-1 bg-slate-50 dark:bg-slate-950"
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      className="flex-1 bg-app-bg"
+      contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={palette.textMuted} />
+      }
     >
-      <QueueSummary items={items} onRetryFailed={retryAllFailed} />
+      <AppHeader title="Downloads" />
+
+      <View className="mt-2 flex-row border-b border-app-border px-5" style={{ gap: 20 }}>
+        {filterTabs.map((t) => {
+          const on = t.id === tab;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setTab(t.id)}
+              style={{
+                paddingVertical: 10,
+                borderBottomWidth: 2,
+                borderBottomColor: on ? palette.accent : "transparent",
+              }}
+            >
+              <Text
+                className={`text-[13.5px] ${on ? "font-bold text-app-text" : "font-medium text-app-text-muted"}`}
+              >
+                {t.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      <View className="mt-4">
+        <QueueSummary items={items} onRetryFailed={retryAllFailed} />
+      </View>
+
       {items.length ? (
         grouped.map((section) =>
           section.data.length ? (
-            <View key={section.status} className="mb-5">
-              <Text className="mb-2 text-xs font-black uppercase text-slate-400">
-                {section.status}
-              </Text>
-              {section.data.map((item: DownloadQueueItem) => {
-                const rowKey = key(item.novelId, item.chapterId);
-                const title = titles[rowKey] ?? {
-                  novelTitle: item.novelId,
-                  chapterTitle: item.chapterId,
-                };
-                return (
-                  <DownloadRow
-                    key={rowKey}
-                    item={item}
-                    novelTitle={title.novelTitle}
-                    chapterTitle={title.chapterTitle}
-                    onRetry={() => {
-                      void retry(item.novelId, item.chapterId).then(() => downloader.poke());
-                    }}
-                    onRemove={() => void remove(item.novelId, item.chapterId)}
-                    onOpen={() =>
-                      router.push({
-                        pathname: "/reader/[novelId]/[chapterId]",
-                        params: { novelId: item.novelId, chapterId: item.chapterId },
-                      })
-                    }
-                  />
-                );
-              })}
+            <View key={section.status}>
+              <SectionHeader title={`${sectionLabels[section.status]} (${section.data.length})`} />
+              <View className="px-5">
+                {section.data.map((item: DownloadQueueItem) => {
+                  const rowKey = key(item.novelId, item.chapterId);
+                  const title = titles[rowKey] ?? {
+                    novelTitle: item.novelId,
+                    chapterTitle: item.chapterId,
+                  };
+                  return (
+                    <DownloadRow
+                      key={rowKey}
+                      item={item}
+                      novelTitle={title.novelTitle}
+                      chapterTitle={title.chapterTitle}
+                      onRetry={() => {
+                        void retry(item.novelId, item.chapterId).then(() => downloader.poke());
+                      }}
+                      onRemove={() => void remove(item.novelId, item.chapterId)}
+                      onOpen={() =>
+                        router.push({
+                          pathname: "/reader/[novelId]/[chapterId]",
+                          params: { novelId: item.novelId, chapterId: item.chapterId },
+                        })
+                      }
+                    />
+                  );
+                })}
+              </View>
             </View>
           ) : null
         )
       ) : (
-        <EmptyState
-          icon="download"
-          title="No queued downloads"
-          subtitle="Use Queue on a novel or chapter to start the worker."
-        />
+        <View className="px-5 pt-6">
+          <EmptyState
+            icon="download"
+            title="No queued downloads"
+            subtitle="Use Queue on a novel or chapter to start the worker."
+          />
+        </View>
       )}
     </ScrollView>
   );

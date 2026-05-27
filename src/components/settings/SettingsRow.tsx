@@ -1,4 +1,5 @@
-import { Pressable, Switch, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { Toggle } from "@/components/ui/controls";
 
 interface SettingsRowBase {
   label: string;
@@ -32,14 +33,12 @@ type SettingsRowProps =
 
 function RowShell({ label, subtitle, children }: SettingsRowBase & { children: React.ReactNode }) {
   return (
-    <View className="border-b border-slate-100 p-4 last:border-b-0 dark:border-slate-800">
+    <View className="border-b border-app-border p-4 last:border-b-0">
       <View className="flex-row items-center justify-between">
         <View className="mr-4 flex-1">
-          <Text className="text-sm font-black text-slate-900 dark:text-slate-50">{label}</Text>
+          <Text className="text-sm font-bold text-app-text">{label}</Text>
           {subtitle ? (
-            <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-              {subtitle}
-            </Text>
+            <Text className="mt-1 text-xs leading-5 text-app-text-muted">{subtitle}</Text>
           ) : null}
         </View>
         {children}
@@ -52,7 +51,7 @@ export function SettingsRow(props: SettingsRowProps) {
   if (props.type === "switch") {
     return (
       <RowShell label={props.label} subtitle={props.subtitle}>
-        <Switch value={props.value} onValueChange={props.onChange} />
+        <Toggle value={props.value} onChange={props.onChange} accessibilityLabel={props.label} />
       </RowShell>
     );
   }
@@ -60,15 +59,21 @@ export function SettingsRow(props: SettingsRowProps) {
   if (props.type === "stepper") {
     return (
       <RowShell label={props.label} subtitle={props.subtitle}>
-        <View className="flex-row items-center rounded-full bg-slate-100 p-1 dark:bg-slate-800">
-          <Pressable onPress={props.onMinus} className="h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-slate-950">
-            <Text className="text-base font-black text-slate-700 dark:text-slate-200">-</Text>
+        <View className="flex-row items-center rounded-full bg-app-surface-2 p-1">
+          <Pressable
+            onPress={props.onMinus}
+            className="h-8 w-8 items-center justify-center rounded-full bg-app-surface-3"
+          >
+            <Text className="text-base font-bold text-app-text">-</Text>
           </Pressable>
-          <Text className="mx-3 min-w-12 text-center text-xs font-black text-slate-700 dark:text-slate-200">
+          <Text className="mx-3 min-w-12 text-center text-xs font-bold text-app-text">
             {props.value}
           </Text>
-          <Pressable onPress={props.onPlus} className="h-8 w-8 items-center justify-center rounded-full bg-white dark:bg-slate-950">
-            <Text className="text-base font-black text-slate-700 dark:text-slate-200">+</Text>
+          <Pressable
+            onPress={props.onPlus}
+            className="h-8 w-8 items-center justify-center rounded-full bg-app-surface-3"
+          >
+            <Text className="text-base font-bold text-app-text">+</Text>
           </Pressable>
         </View>
       </RowShell>
@@ -77,27 +82,23 @@ export function SettingsRow(props: SettingsRowProps) {
 
   if (props.type === "segments") {
     return (
-      <View className="border-b border-slate-100 p-4 last:border-b-0 dark:border-slate-800">
-        <Text className="text-sm font-black text-slate-900 dark:text-slate-50">{props.label}</Text>
+      <View className="border-b border-app-border p-4 last:border-b-0">
+        <Text className="text-sm font-bold text-app-text">{props.label}</Text>
         {props.subtitle ? (
-          <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-            {props.subtitle}
-          </Text>
+          <Text className="mt-1 text-xs leading-5 text-app-text-muted">{props.subtitle}</Text>
         ) : null}
-        <View className="mt-3 flex-row flex-wrap rounded-2xl bg-slate-100 p-1 dark:bg-slate-800">
+        <View className="mt-3 flex-row flex-wrap rounded-2xl bg-app-surface-2 p-1">
           {props.options.map((option) => {
             const selected = props.value === option;
             return (
               <Pressable
                 key={option}
                 onPress={() => props.onChange(option)}
-                className={`m-1 rounded-full px-3 py-2 ${selected ? "bg-white dark:bg-slate-950" : ""}`}
+                className={`m-1 rounded-full px-3 py-2 ${selected ? "bg-app-surface-3" : ""}`}
               >
                 <Text
-                  className={`text-xs font-black ${
-                    selected
-                      ? "text-slate-950 dark:text-slate-50"
-                      : "text-slate-500 dark:text-slate-400"
+                  className={`text-xs font-bold ${
+                    selected ? "text-app-text" : "text-app-text-muted"
                   }`}
                 >
                   {option}
@@ -111,27 +112,21 @@ export function SettingsRow(props: SettingsRowProps) {
   }
 
   return (
-    <Pressable onPress={props.onPress} className="border-b border-slate-100 p-4 active:opacity-75 last:border-b-0 dark:border-slate-800">
+    <Pressable
+      onPress={props.onPress}
+      className="border-b border-app-border p-4 last:border-b-0 active:opacity-75"
+    >
       <View className="flex-row items-center justify-between">
         <View className="mr-4 flex-1">
-          <Text
-            className={`text-sm font-black ${
-              props.danger ? "text-red-600" : "text-slate-900 dark:text-slate-50"
-            }`}
-          >
+          <Text className={`text-sm font-bold ${props.danger ? "text-app-danger" : "text-app-text"}`}>
             {props.label}
           </Text>
           {props.subtitle ? (
-            <Text className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
-              {props.subtitle}
-            </Text>
+            <Text className="mt-1 text-xs leading-5 text-app-text-muted">{props.subtitle}</Text>
           ) : null}
         </View>
-        {props.value ? (
-          <Text className="text-xs font-bold text-slate-400">{props.value}</Text>
-        ) : null}
+        {props.value ? <Text className="text-xs font-bold text-app-text-muted">{props.value}</Text> : null}
       </View>
     </Pressable>
   );
 }
-

@@ -7,6 +7,24 @@
   --reader-fg: 17 24 39;
   --reader-muted: 107 114 128;
   --reader-accent: 99 102 241;
+
+  /* App-chrome defaults = dark-navy (ref NR_THEME). ThemeProvider overrides
+     these at runtime via vars() so the four selectable themes + custom work. */
+  --app-bg: #0B1220;
+  --app-surface: #141C2E;
+  --app-surface-2: #1B2438;
+  --app-surface-3: #222D44;
+  --app-border: rgba(255, 255, 255, 0.07);
+  --app-border-strong: rgba(255, 255, 255, 0.12);
+  --app-text: #E8EBF1;
+  --app-text-dim: #B0B8C9;
+  --app-text-muted: #7782A0;
+  --app-accent: #8B95FF;
+  --app-accent-dim: rgba(139, 149, 255, 0.18);
+  --app-on-accent: #0B1220;
+  --app-success: #4CD7A0;
+  --app-warn: #FFB454;
+  --app-danger: #FF7676;
 }
 
 .theme-dark {
@@ -21,4 +39,11 @@
   --reader-fg: 60 40 25;
   --reader-muted: 120 95 70;
   --reader-accent: 180 100 40;
+}
+
+.theme-oled {
+  --reader-bg: 0 0 0;
+  --reader-fg: 216 220 228;
+  --reader-muted: 90 99 120;
+  --reader-accent: 165 180 252;
 }

@@ -1,30 +1,26 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Text } from "react-native";
 import { splitSentences } from "@/services/tts";
+import { readerFontFamily } from "@/theme/readerFonts";
 import { readerPalettes } from "@/theme/readerThemes";
 import type { ReaderAppearance } from "@/stores/readerStore";
 import type { HighlightMode } from "@/stores/settingsStore";
-
-function fontFamily(fontStyle: ReaderAppearance["fontStyle"]) {
-  switch (fontStyle) {
-    case "mono":
-      return "Courier New";
-    case "serif":
-      return "Georgia";
-    case "sans":
-    case "system":
-    default:
-      return undefined;
-  }
-}
 
 interface ReaderContentProps {
   text: string;
   appearance: ReaderAppearance;
   highlightedSentenceIdx?: number | null;
   highlightMode?: HighlightMode;
+  /** TTS is currently playing — used to decide whether focus blur applies. */
+  ttsPlaying?: boolean;
   onSentenceDoubleTap?: (sentenceIndex: number) => void;
 }
+
+const FOCUS_WINDOW: Record<"narrow" | "medium" | "wide", number> = {
+  narrow: 0,
+  medium: 1,
+  wide: 2,
+};
 
 interface SentenceInfo {
   sentence: string;
@@ -61,6 +57,7 @@ export function ReaderContent({
   appearance,
   highlightedSentenceIdx,
   highlightMode = "sentence",
+  ttsPlaying = false,
   onSentenceDoubleTap,
 }: ReaderContentProps) {
   const palette = readerPalettes[appearance.theme];
@@ -113,6 +110,33 @@ export function ReaderContent({
   const underlineActive = highlightMode === "underlineParagraph";
   const accentBg = palette.accent + "2E";
 
+  // Focus blur. RN can't Gaussian-blur inline <Text> per paragraph, so "focus"
+  // mode dims the surrounding text instead; the blur slider folds into dim
+  // strength. `blurAll` mode is handled by a BlurView overlay in the reader
+  // screen, not here. Focus tracks the TTS-highlighted sentence, so it's only
+  // visible when there's an active sentence (during playback by default).
+  const focus = appearance.focus;
+  const focusActive =
+    focus.enabled &&
+    focus.mode === "focus" &&
+    ((ttsPlaying && focus.duringTTS) || (!ttsPlaying && focus.duringManual)) &&
+    highlightedSentenceIdx !== null &&
+    highlightedSentenceIdx !== undefined;
+  const focusRange = FOCUS_WINDOW[focus.window];
+  const dimAlpha = focusActive
+    ? Math.min(0.9, (focus.dim / 100) * 0.85 + (focus.blur / 15) * 0.25)
+    : 0;
+
+  const isFocusClear = (idx: number): boolean => {
+    if (!focusActive || highlightedSentenceIdx === null || highlightedSentenceIdx === undefined)
+      return true;
+    if (focus.target === "sentence") {
+      return Math.abs(idx - highlightedSentenceIdx) <= focusRange;
+    }
+    const p = sentenceInfo[idx]?.paragraphIdx ?? 0;
+    return activeParagraphIdx === null ? true : Math.abs(p - activeParagraphIdx) <= focusRange;
+  };
+
   return (
     <Text
       selectable={false}
@@ -120,7 +144,7 @@ export function ReaderContent({
         color: palette.fg,
         fontSize: appearance.fontSize,
         lineHeight: appearance.fontSize * appearance.lineHeight,
-        fontFamily: fontFamily(appearance.fontStyle),
+        fontFamily: readerFontFamily(appearance.fontStyle),
         textAlign: appearance.alignment,
       }}
     >
@@ -134,6 +158,7 @@ export function ReaderContent({
             style={{
               backgroundColor: highlighted ? accentBg : "transparent",
               textDecorationLine: highlighted && underlineActive ? "underline" : "none",
+              opacity: isFocusClear(idx) ? 1 : 1 - dimAlpha,
             }}
           >
             {sentence}

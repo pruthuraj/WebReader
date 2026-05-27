@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 import { Tabs } from "expo-router";
 import { Feather } from "@expo/vector-icons";
+import { useAppPalette } from "@/theme/useAppPalette";
 
 type FeatherName = ComponentProps<typeof Feather>["name"];
 
@@ -13,49 +14,36 @@ function tabIcon(name: FeatherName) {
 }
 
 export default function TabsLayout() {
+  const palette = useAppPalette();
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#0F172A" },
-        headerTintColor: "#F8FAFC",
-        headerTitleStyle: { fontWeight: "600" },
+        headerShown: false,
+        sceneStyle: { backgroundColor: palette.bg },
         tabBarStyle: {
-          backgroundColor: "#0F172A",
-          borderTopColor: "#1E293B",
+          backgroundColor: palette.bg,
+          borderTopColor: palette.border,
         },
-        tabBarActiveTintColor: "#FDE68A",
-        tabBarInactiveTintColor: "#94A3B8",
+        tabBarActiveTintColor: palette.accent,
+        tabBarInactiveTintColor: palette.textMuted,
         tabBarLabelStyle: { fontWeight: "600", fontSize: 11 },
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: tabIcon("home"),
-          headerTitle: "WebReader",
-        }}
+        options={{ title: "Home", tabBarIcon: tabIcon("home") }}
       />
       <Tabs.Screen
         name="search"
-        options={{
-          title: "Search",
-          tabBarIcon: tabIcon("search"),
-        }}
+        options={{ title: "Search", tabBarIcon: tabIcon("search") }}
       />
       <Tabs.Screen
         name="downloads"
-        options={{
-          title: "Downloads",
-          tabBarIcon: tabIcon("download"),
-        }}
+        options={{ title: "Downloads", tabBarIcon: tabIcon("download") }}
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          title: "Settings",
-          tabBarIcon: tabIcon("settings"),
-        }}
+        options={{ title: "Settings", tabBarIcon: tabIcon("settings") }}
       />
     </Tabs>
   );

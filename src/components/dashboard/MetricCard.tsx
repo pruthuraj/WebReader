@@ -8,22 +8,15 @@ interface MetricCardProps {
 }
 
 export function MetricCard({ label, value, suffix, emphasis = "primary" }: MetricCardProps) {
-  const valueColor =
-    emphasis === "primary"
-      ? "text-slate-950 dark:text-slate-50"
-      : "text-slate-600 dark:text-slate-300";
+  const valueColor = emphasis === "primary" ? "text-app-text" : "text-app-text-dim";
 
   return (
-    <View className="min-w-[45%] flex-grow rounded-2xl bg-white p-4 dark:bg-slate-900">
-      <Text className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-        {label}
-      </Text>
-      <View className="mt-1 flex-row items-baseline">
-        <Text className={`text-3xl font-black ${valueColor}`}>{value}</Text>
-        {suffix ? (
-          <Text className="ml-1 text-xs font-bold text-slate-400">{suffix}</Text>
-        ) : null}
+    <View className="min-w-[45%] flex-grow rounded-2xl border border-app-border bg-app-surface p-4">
+      <View className="flex-row items-baseline">
+        <Text className={`text-[26px] font-bold ${valueColor}`}>{value}</Text>
+        {suffix ? <Text className="ml-1 text-xs font-bold text-app-text-muted">{suffix}</Text> : null}
       </View>
+      <Text className="mt-1 text-xs text-app-text-muted">{label}</Text>
     </View>
   );
 }

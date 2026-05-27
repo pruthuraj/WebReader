@@ -1,6 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { Image, Text, View } from "react-native";
+import { readerFontFamily } from "@/theme/readerFonts";
 
 // Supported coverHint values. The mock catalogue uses the first five; the rest
 // are pre-mapped so a future backend or expanded mock can reach for them
@@ -31,12 +32,29 @@ function initials(title: string) {
 interface CoverPlaceholderProps {
   title: string;
   coverHint?: string | null;
+  /** Explicit pixel size (ref covers use specific dimensions per rail). */
+  width?: number;
+  height?: number;
+  radius?: number;
+  fontSize?: number;
+  /** Legacy sizing shorthand when explicit width/height aren't given. */
   compact?: boolean;
 }
 
-export function CoverPlaceholder({ title, coverHint, compact }: CoverPlaceholderProps) {
+export function CoverPlaceholder({
+  title,
+  coverHint,
+  width,
+  height,
+  radius,
+  fontSize,
+  compact,
+}: CoverPlaceholderProps) {
+  const w = width ?? (compact ? 80 : 112);
+  const h = height ?? (compact ? 112 : 160);
+  const r = radius ?? 8;
+  const fs = fontSize ?? Math.round(w * 0.34);
   const colors = gradients[coverHint ?? ""] ?? ["#334155", "#0F172A"];
-  const sizeClass = compact ? "h-24 w-20" : "h-40 w-28";
 
   // Live sources store a real cover image URL in coverHint. Render it as an
   // image; on load failure fall through to the gradient placeholder.
@@ -46,7 +64,8 @@ export function CoverPlaceholder({ title, coverHint, compact }: CoverPlaceholder
   if (isUrl && !imageFailed) {
     return (
       <View
-        className={`${sizeClass} overflow-hidden rounded-lg border border-white/20 bg-slate-800`}
+        style={{ width: w, height: h, borderRadius: r }}
+        className="overflow-hidden border border-white/15 bg-slate-800"
       >
         <Image
           source={{ uri: coverHint as string }}
@@ -64,13 +83,26 @@ export function CoverPlaceholder({ title, coverHint, compact }: CoverPlaceholder
       colors={colors}
       start={{ x: 0.1, y: 0 }}
       end={{ x: 0.9, y: 1 }}
-      className={`${sizeClass} overflow-hidden rounded-lg border border-white/20`}
+      style={{
+        width: w,
+        height: h,
+        borderRadius: r,
+        alignItems: "center",
+        justifyContent: "center",
+        overflow: "hidden",
+      }}
     >
-      <View className="flex-1 justify-between p-3">
-        <Text className="text-[10px] font-semibold uppercase text-white/70">WebReader</Text>
-        <Text className="text-3xl font-black text-white">{initials(title)}</Text>
-      </View>
+      <Text
+        style={{
+          fontFamily: readerFontFamily("lora", "semibold"),
+          fontSize: fs,
+          fontWeight: "600",
+          color: "rgba(255,255,255,0.92)",
+          letterSpacing: 0.5,
+        }}
+      >
+        {initials(title)}
+      </Text>
     </LinearGradient>
   );
 }
-

@@ -31,28 +31,23 @@ function PlaybackButton({
   disabled?: boolean;
   onPress: () => void;
 }) {
-  let bg = "bg-white/10";
-  let color = "#F8FAFC";
-  if (variant === "primary") {
-    bg = "bg-white";
-    color = "#020617";
-  } else if (variant === "stop") {
-    bg = "bg-white/10";
-    color = "#FCA5A5";
-  }
-
+  const primary = variant === "primary";
+  const color = primary ? "#0B1220" : variant === "stop" ? "#7782A0" : "#E8EBF1";
+  const sizeClass = primary ? "h-14 w-14" : "h-11 w-11";
+  const bgStyle = primary ? { backgroundColor: "#8B95FF" } : undefined;
   const opacityClass = disabled ? "opacity-40" : "active:opacity-75";
 
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      className={`h-11 w-11 items-center justify-center rounded-full ${bg} ${opacityClass}`}
+      style={bgStyle}
+      className={`${sizeClass} items-center justify-center rounded-full ${opacityClass}`}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
     >
-      <Feather name={icon} size={variant === "primary" ? 22 : 18} color={color} />
+      <Feather name={icon} size={primary ? 24 : 22} color={color} />
     </Pressable>
   );
 }
@@ -118,14 +113,12 @@ export function ReaderPlaybackBar({
                   setSleepTimer(option.seconds);
                   setSleepOpen(false);
                 }}
-                className={`m-1 rounded-full px-3 py-2 ${
-                  selected ? "bg-cyan-400" : "bg-white/10"
-                }`}
+                style={selected ? { backgroundColor: "#8B95FF" } : undefined}
+                className={`m-1 rounded-full px-3 py-2 ${selected ? "" : "bg-white/10"}`}
               >
                 <Text
-                  className={`text-xs font-black ${
-                    selected ? "text-slate-950" : "text-white"
-                  }`}
+                  className="text-xs font-bold"
+                  style={{ color: selected ? "#0B1220" : "#E8EBF1" }}
                 >
                   {option.label}
                 </Text>
@@ -136,8 +129,12 @@ export function ReaderPlaybackBar({
       ) : null}
 
       <View
-        className="mx-3 mb-5 flex-row items-center gap-2 rounded-full p-2"
-        style={{ backgroundColor: "rgba(2, 6, 23, 0.94)" }}
+        className="mx-3.5 mb-6 flex-row items-center justify-between rounded-[24px] px-4 py-3"
+        style={{
+          backgroundColor: "rgba(20,28,46,0.97)",
+          borderWidth: 1,
+          borderColor: "rgba(255,255,255,0.12)",
+        }}
       >
         <PlaybackButton
           icon="chevron-left"
@@ -157,27 +154,25 @@ export function ReaderPlaybackBar({
           disabled={!next}
           onPress={onNextChapter}
         />
-        {showStop ? (
-          <PlaybackButton
-            icon="square"
-            label="Stop"
-            variant="stop"
-            onPress={() => {
-              void stop();
-              setSleepOpen(false);
-            }}
-          />
-        ) : null}
-        <View className="flex-1" />
+        <PlaybackButton
+          icon="square"
+          label="Stop"
+          variant="stop"
+          disabled={!showStop}
+          onPress={() => {
+            void stop();
+            setSleepOpen(false);
+          }}
+        />
         <Pressable
           onPress={() => setSleepOpen((open) => !open)}
-          className="h-11 min-w-[44px] items-center justify-center rounded-full bg-cyan-500 px-3 active:opacity-75"
+          className="h-11 min-w-[44px] items-center justify-center rounded-full px-2 active:opacity-75"
           accessibilityRole="button"
           accessibilityLabel="Sleep timer"
         >
-          <Feather name="clock" size={17} color="#FFFFFF" />
+          <Feather name="clock" size={20} color={sleepRemainingSec ? "#8B95FF" : "#7782A0"} />
           {sleepRemainingSec ? (
-            <Text className="mt-0.5 text-[9px] font-black text-white">
+            <Text className="mt-0.5 text-[9px] font-bold" style={{ color: "#8B95FF" }}>
               {Math.ceil(sleepRemainingSec / 60)}m
             </Text>
           ) : null}

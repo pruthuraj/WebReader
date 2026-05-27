@@ -9,16 +9,15 @@ interface SettingsSectionProps {
 export function SettingsSection({ title, subtitle, children }: SettingsSectionProps) {
   return (
     <View className="mb-5">
-      <Text className="mb-1 text-xs font-black uppercase text-slate-400">{title}</Text>
+      <Text className="mb-1 text-xs font-bold uppercase tracking-wider text-app-text-muted">
+        {title}
+      </Text>
       {subtitle ? (
-        <Text className="mb-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-          {subtitle}
-        </Text>
+        <Text className="mb-3 text-xs leading-5 text-app-text-muted">{subtitle}</Text>
       ) : null}
-      <View className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <View className="overflow-hidden rounded-2xl border border-app-border bg-app-surface">
         {children}
       </View>
     </View>
   );
 }
-

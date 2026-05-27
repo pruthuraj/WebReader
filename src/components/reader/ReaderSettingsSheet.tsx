@@ -10,6 +10,7 @@ import {
   type TextAlignment,
 } from "@/stores/readerStore";
 import { useSettingsStore } from "@/stores/settingsStore";
+import { readerFontOptions } from "@/theme/readerFonts";
 import { readerFontSizes, readerLineHeights } from "@/theme/tokens";
 import type { ReaderThemeName } from "@/theme/readerThemes";
 import { useAnimatedSheet } from "@/hooks/useAnimatedSheet";
@@ -83,7 +84,8 @@ function Segmented<T extends string>({
             <Pressable
               key={option.value}
               onPress={() => onChange(option.value)}
-              className={`m-1 rounded-full px-3 py-2 ${selected ? "bg-yellow-300" : ""}`}
+              style={selected ? { backgroundColor: "#8B95FF" } : undefined}
+              className={`m-1 rounded-full px-3 py-2 ${selected ? "" : ""}`}
             >
               <Text
                 className={`text-xs font-black ${
@@ -153,6 +155,7 @@ export function ReaderSettingsSheet({ visible, onClose }: ReaderSettingsSheetPro
           className="max-h-[86%] overflow-hidden rounded-t-[28px] p-5"
           style={[sheetStyle, { backgroundColor: "rgba(2, 6, 23, 0.96)" }]}
         >
+          <View className="mb-3 h-1 w-9 self-center rounded-full bg-white/20" />
           <View className="mb-4 flex-row items-center justify-between">
             <View>
               <Text className="text-2xl font-black text-white">Reading Style</Text>
@@ -248,18 +251,14 @@ export function ReaderSettingsSheet({ visible, onClose }: ReaderSettingsSheetPro
                 { value: "light", label: "Light" },
                 { value: "sepia", label: "Sepia" },
                 { value: "dark", label: "Dark" },
+                { value: "oled", label: "OLED" },
               ]}
             />
             <Segmented<FontStyle>
               label="Font"
               value={appearance.fontStyle}
               onChange={(fontStyle) => updateAppearance({ fontStyle })}
-              options={[
-                { value: "system", label: "System" },
-                { value: "serif", label: "Serif" },
-                { value: "sans", label: "Sans" },
-                { value: "mono", label: "Mono" },
-              ]}
+              options={readerFontOptions.map((o) => ({ value: o.key, label: o.label }))}
             />
             <Segmented<TextAlignment>
               label="Alignment"
@@ -268,6 +267,7 @@ export function ReaderSettingsSheet({ visible, onClose }: ReaderSettingsSheetPro
               options={[
                 { value: "left", label: "Left" },
                 { value: "justify", label: "Justify" },
+                { value: "center", label: "Center" },
               ]}
             />
             <View className="mb-8 flex-row items-center justify-between rounded-2xl bg-white/5 p-4">
@@ -280,8 +280,8 @@ export function ReaderSettingsSheet({ visible, onClose }: ReaderSettingsSheetPro
               <Switch
                 value={settings.readerDefaults.keepAwake}
                 onValueChange={(keepAwake) => updateAppearance({ keepAwake })}
-                trackColor={{ false: "#1E293B", true: "#FDE68A" }}
-                thumbColor={settings.readerDefaults.keepAwake ? "#020617" : "#94A3B8"}
+                trackColor={{ false: "#1E293B", true: "#8B95FF" }}
+                thumbColor={settings.readerDefaults.keepAwake ? "#FFFFFF" : "#94A3B8"}
               />
             </View>
           </ScrollView>

@@ -35,7 +35,7 @@ function OptionRow({
       className="mb-2 flex-row items-center rounded-2xl bg-white/5 p-4 active:opacity-75"
     >
       <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
-        <Feather name={icon} size={18} color="#FDE68A" />
+        <Feather name={icon} size={18} color="#8B95FF" />
       </View>
       <View className="ml-3 flex-1">
         <Text className="text-base font-black text-white">{label}</Text>
@@ -77,6 +77,7 @@ export function ReaderOptionsSheet({
           className="max-h-[86%] overflow-hidden rounded-t-[28px] p-5"
           style={[sheetStyle, { backgroundColor: "rgba(2, 6, 23, 0.96)" }]}
         >
+          <View className="mb-3 h-1 w-9 self-center rounded-full bg-white/20" />
           <View className="mb-4 flex-row items-center justify-between">
             <View>
               <Text className="text-2xl font-black text-white">Reader options</Text>

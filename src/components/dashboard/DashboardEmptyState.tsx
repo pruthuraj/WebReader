@@ -1,27 +1,27 @@
 import { useRouter } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useAppPalette } from "@/theme/useAppPalette";
 
 export function DashboardEmptyState() {
   const router = useRouter();
+  const palette = useAppPalette();
   return (
-    <View className="mt-6 items-center rounded-2xl border border-dashed border-slate-300 bg-white p-8 dark:border-slate-700 dark:bg-slate-900">
-      <View className="h-12 w-12 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-950">
-        <Feather name="bar-chart-2" size={22} color="#6366F1" />
+    <View className="mt-6 items-center rounded-2xl border border-app-border bg-app-surface p-8">
+      <View className="h-12 w-12 items-center justify-center rounded-full bg-app-accent-dim">
+        <Feather name="bar-chart-2" size={22} color={palette.accent} />
       </View>
-      <Text className="mt-4 text-base font-black text-slate-950 dark:text-slate-50">
-        Use the app a bit and come back
-      </Text>
-      <Text className="mt-2 text-center text-xs text-slate-500 dark:text-slate-400">
+      <Text className="mt-4 text-base font-bold text-app-text">Use the app a bit and come back</Text>
+      <Text className="mt-2 text-center text-xs text-app-text-muted">
         Your reading metrics appear here once you have searched, opened a novel, or finished a
         chapter.
       </Text>
       <Pressable
         onPress={() => router.push("/search")}
         accessibilityRole="button"
-        className="mt-5 rounded-full bg-indigo-500 px-5 py-2 active:opacity-80"
+        className="mt-5 rounded-full bg-app-accent px-5 py-2 active:opacity-80"
       >
-        <Text className="text-xs font-black uppercase text-white">Find a novel</Text>
+        <Text className="text-xs font-bold uppercase text-app-on-accent">Find a novel</Text>
       </Pressable>
     </View>
   );

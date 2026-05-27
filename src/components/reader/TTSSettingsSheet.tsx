@@ -113,11 +113,12 @@ function Chip({
   accent?: "yellow" | "cyan";
   onPress: () => void;
 }) {
-  const selectedBg = accent === "cyan" ? "bg-cyan-400" : "bg-yellow-300";
+  const selectedColor = accent === "cyan" ? "#22D3EE" : "#8B95FF";
   return (
     <Pressable
       onPress={onPress}
-      className={`mr-2 mt-2 rounded-full px-3 py-2 ${selected ? selectedBg : "bg-white/10"}`}
+      style={selected ? { backgroundColor: selectedColor } : undefined}
+      className={`mr-2 mt-2 rounded-full px-3 py-2 ${selected ? "" : "bg-white/10"}`}
     >
       <Text className={`text-xs font-black ${selected ? "text-slate-950" : "text-white/80"}`}>
         {label}
@@ -151,7 +152,7 @@ function ActionRow({
       }`}
     >
       <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
-        <Feather name={icon} size={16} color="#FDE68A" />
+        <Feather name={icon} size={16} color="#8B95FF" />
       </View>
       <View className="ml-3 flex-1 pr-2">
         <Text className="text-sm font-black text-white">{label}</Text>
@@ -184,7 +185,7 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: "#1E293B", true: "#FDE68A" }}
+        trackColor={{ false: "#1E293B", true: "#8B95FF" }}
         thumbColor={value ? "#020617" : "#94A3B8"}
       />
     </View>
@@ -328,6 +329,7 @@ export function TTSSettingsSheet({
           className="max-h-[88%] overflow-hidden rounded-t-[28px] p-5"
           style={[sheetStyle, { backgroundColor: "rgba(2, 6, 23, 0.96)" }]}
         >
+          <View className="mb-3 h-1 w-9 self-center rounded-full bg-white/20" />
           <View className="mb-4 flex-row items-center justify-between">
             <View className="flex-1 pr-3">
               <Text className="text-2xl font-black text-white">Listen</Text>
@@ -466,7 +468,7 @@ export function TTSSettingsSheet({
               className="mb-2 mt-1 flex-row items-center rounded-2xl bg-white/5 p-3 active:opacity-75"
             >
               <View className="h-10 w-10 items-center justify-center rounded-full bg-white/10">
-                <Feather name="mic" size={16} color="#FDE68A" />
+                <Feather name="mic" size={16} color="#8B95FF" />
               </View>
               <View className="ml-3 flex-1 pr-2">
                 <Text className="text-sm font-black text-white">Pronunciation rules</Text>
@@ -509,7 +511,7 @@ export function TTSSettingsSheet({
               <Feather
                 name={showCleaning ? "chevron-up" : "chevron-down"}
                 size={18}
-                color="#FDE68A"
+                color="#8B95FF"
               />
             </Pressable>
 
@@ -541,10 +543,13 @@ export function TTSSettingsSheet({
                 <Pressable
                   onPress={addCurrentToQueue}
                   disabled={!novelId || !chapterId || currentInQueue}
-                  className={`mr-2 mt-2 rounded-full px-3 py-2 ${
+                  style={
                     !novelId || !chapterId || currentInQueue
-                      ? "bg-white/5"
-                      : "bg-yellow-300 active:opacity-75"
+                      ? undefined
+                      : { backgroundColor: "#8B95FF" }
+                  }
+                  className={`mr-2 mt-2 rounded-full px-3 py-2 ${
+                    !novelId || !chapterId || currentInQueue ? "bg-white/5" : "active:opacity-75"
                   }`}
                   accessibilityRole="button"
                 >
@@ -605,7 +610,7 @@ export function TTSSettingsSheet({
               <Feather
                 name={showDevice ? "chevron-up" : "chevron-down"}
                 size={18}
-                color="#FDE68A"
+                color="#8B95FF"
               />
             </Pressable>
 
